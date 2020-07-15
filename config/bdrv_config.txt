@@ -1,0 +1,22 @@
+===base-color:===
+64 48 0
+===lines-colors:===
+0 128 255
+255 119 187
+0 240 240
+0 192 192
+102 255 102
+128 255 255
+255 255 0
+255 0 255
+0 255 255
+164 160 160
+===objects-colors:===
+collon 0 255 252 yellow
+heat-exchanger 0 0 231 red
+indicator 231 201 0 blue
+pump 0 255 144 lime
+tank 0 162 255 orange
+valve 135 135 135 deeppink
+text 255 0 198 silver
+=== end of objects-colors ===
