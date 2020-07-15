@@ -12,22 +12,35 @@ from BDRV_Scripts.preprocessing.MnemoObjList import MnemoObjList
 
 class GUI(object):
     def __init__(self):
-        self.config_file_path = 'C:\\Python_projects\\BDRV\\config\\bdrv_config.txt'
+        self.config_file_path = r'C:/Python_projects/BDRV2/config/bdrv_config.txt'
         self.uploadedScreenshot = '' # здесь будем хранить путь к скриншоту мнемосхемы
+        self.obj_colors = {}  # словарь для хранения цветов объектов
+        self.image_with_objects = None  # путь к изображению с обнаруженными объектами
+        self.canvas_with_objects = None  # канва, на которой работаем с найденными объектами
+        self.display_image = None  # отображаемая картинка в Canvas
+        self.ph = None  # отображаемый прямоугольник поверх объекта
+        self.rect = None  # прямоугольник для обводки объекта мнемосхемы под курсором
+
+        self.mnemo_obj_list = MnemoObjList()
+        self.Md = Modeller()  # класс для работы с нейросетью
+
         self.window = Tk() # главное окно интерфейса
+        self.frame_right_menu = ttk.Frame(self.window, width=200)
+        self.tab_control = ttk.Notebook(self.window)  # вкладки на главном окне
+        self.lbl_tree = ttk.Label(self.frame_right_menu, text='Объекты мнемосхемы:')
+        self.obj_tree = ttk.Treeview(self.frame_right_menu)
+        self.frame_right_menu_sub = ttk.Frame(self.frame_right_menu)
+        self.window.title("Автомнемо")
+        self.window.geometry('1000x650')
 
-        self.frame_right_menu = ttk.Frame(self.window, width = 200)
-        self.frame_right_menu.pack(side=RIGHT,  fill=Y)
+        self.frame_right_menu.pack(side=RIGHT, fill=Y)
 
-        self.tab_control = ttk.Notebook(self.window) # вкладки на главном окне
         self.tab1 = ttk.Frame(self.tab_control)
         self.tab2 = ttk.Frame(self.tab_control)
         self.tab3 = ttk.Frame(self.tab_control)
 
-        self.lbl_tree = ttk.Label(self.frame_right_menu, text = 'Объекты мнемосхемы:')
-        self.lbl_tree.pack(side = TOP)
+        self.lbl_tree.pack(side=TOP)
 
-        self.obj_tree = ttk.Treeview(self.frame_right_menu)
         self.obj_tree.master = self.frame_right_menu
         self.obj_tree["columns"] = ("one", "two", "three")
         self.obj_tree.column("#0", width=100, minwidth=20)
@@ -41,7 +54,7 @@ class GUI(object):
         # Level 1
         self.folder1 = self.obj_tree.insert("", 0, "collon", text="Колонны", values=("collon", "", ""))
         self.folder2 = self.obj_tree.insert("", 1, "heat-exchanger", text="Теплообменники",
-                                            values= ("heat-exchanger", "", ""))
+                                            values=("heat-exchanger", "", ""))
         self.folder3 = self.obj_tree.insert("", 2, "indicator", text="Индикаторы", values=("indicator", "", ""))
         self.folder4 = self.obj_tree.insert("", 3, "pump", text="Насосы", values=("pump", "", ""))
         self.folder5 = self.obj_tree.insert("", 4, "tank", text="Резервуары", values=("tank", "", ""))
@@ -49,56 +62,57 @@ class GUI(object):
         self.folder7 = self.obj_tree.insert("", 6, "text", text="Текст", values=("text", "", ""))
         self.obj_tree.pack(side=TOP)
 
-        self.frame_right_menu_sub = ttk.Frame(self.frame_right_menu)
-        self.frame_right_menu_sub.pack(side = TOP)
-        self.lbl_mn_obj = ttk.Label(self.frame_right_menu_sub, text = 'Свойства объекта:')
-        self.lbl_mn_obj.pack(side = TOP)
+        self.frame_right_menu_sub.pack(side=TOP)
+        self.lbl_mn_obj = ttk.Label(self.frame_right_menu_sub, text='Свойства объекта:')
+        self.lbl_mn_obj.pack(side=TOP)
 
         self.frame_right_menu_sub0 = ttk.Frame(self.frame_right_menu)
         self.frame_right_menu_sub0.pack(side=TOP)
         self.frame_right_menu_sub00 = ttk.Frame(self.frame_right_menu)
         self.frame_right_menu_sub00.pack(side=TOP)
         self.lbl_objName = ttk.Label(self.frame_right_menu_sub00, text='Имя объекта:')
-        self.lbl_objName.pack(side = LEFT)
+        self.lbl_objName.pack(side=LEFT)
         self.txtObjName = ttk.Entry(self.frame_right_menu_sub00)
-        self.txtObjName.pack(side = LEFT)
+        self.txtObjName.pack(side=LEFT)
         self.frame_right_menu_sub1 = ttk.Frame(self.frame_right_menu_sub00)
         self.frame_right_menu_sub1.pack(side=LEFT)
         self.lblObjType = ttk.Label(self.frame_right_menu_sub1, text='Тип объекта:')
-        self.lblObjType.pack(side = LEFT)
+        self.lblObjType.pack(side=LEFT)
         self.cmbxObjType = ttk.Combobox(self.frame_right_menu_sub1)
-        self.cmbxObjType['values']=('collon',
-                                    'heat-exchanger',
-                                    'indicator',
-                                    'pump',
-                                    'tank',
-                                    'valve',
-                                    'text')
-        self.cmbxObjType.pack(side = LEFT)
+        self.cmbxObjType['values'] = ('collon',
+                                      'heat-exchanger',
+                                      'indicator',
+                                      'pump',
+                                      'tank',
+                                      'valve',
+                                      'text')
+        self.cmbxObjType.pack(side=LEFT)
 
         self.frame_right_menu_sub2 = ttk.Frame(self.frame_right_menu)
         self.frame_right_menu_sub2.pack(side=TOP)
-        self.lblcoord = ttk.Label(self.frame_right_menu_sub2, text = 'Координаты объекта:')
-        self.lblcoord.pack(side = LEFT)
+        self.lblcoord = ttk.Label(self.frame_right_menu_sub2, text='Координаты объекта:')
+        self.lblcoord.pack(side=LEFT)
         self.lblX = ttk.Label(self.frame_right_menu_sub2, text='x:')
-        self.lblX.pack(side = LEFT)
+        self.lblX.pack(side=LEFT)
         self.lblXval = ttk.Label(self.frame_right_menu_sub2, text='')
-        self.lblXval.pack(side = LEFT)
-        self.lblY = ttk.Label(self.frame_right_menu_sub2, text = 'y:')
-        self.lblY.pack(side = LEFT)
+        self.lblXval.pack(side=LEFT)
+        self.lblY = ttk.Label(self.frame_right_menu_sub2, text='y:')
+        self.lblY.pack(side=LEFT)
         self.lblYval = ttk.Label(self.frame_right_menu_sub2, text='')
-        self.lblYval.pack(side = LEFT)
+        self.lblYval.pack(side=LEFT)
 
         self.frame_right_menu_sub3 = ttk.Frame(self.frame_right_menu)
-        self.frame_right_menu_sub3.pack(side = TOP)
-        self.btnSaveObj = ttk.Button(self.frame_right_menu_sub3, text = 'Сохранить изменения')
-        self.btnSaveObj.pack(side = LEFT)
-        self.btnDelObj = ttk.Button(self.frame_right_menu_sub3, text = 'Удалить объект')
-        self.btnDelObj.pack(side = LEFT)
+        self.frame_right_menu_sub3.pack(side=TOP)
+        self.btnSaveObj = ttk.Button(self.frame_right_menu_sub3, text='Сохранить изменения')
+        self.btnSaveObj.pack(side=LEFT)
+        self.btnDelObj = ttk.Button(self.frame_right_menu_sub3, text='Удалить объект')
+        self.btnDelObj.pack(side=LEFT)
 
-        self.mnemo_obj_list = MnemoObjList()
-        self.Md = Modeller()  # класс для работы с нейросетью
-        self.obj_colors = {}    # словарь для хранения цветов объектов
+        # Вкладки:
+        self.tab_control.add(self.tab1, text='Скриншот мнемосземы')
+        self.tab_control.add(self.tab2, text='Обнаруженные объекты')
+        self.tab_control.add(self.tab3, text='Обнаруженные линии')
+        self.tab_control.pack(expand=1, fill='both')
 
         # читаем файл конфигурации:
         with io.open(self.config_file_path) as config:
@@ -126,25 +140,10 @@ class GUI(object):
                 row = config.readline()
             config.close()
 
-        self.image_with_objects = None # путь к изображению с обнаруженными объектами
-        self.canvas_with_objects = None # канва, на которой работаем с найденными объектами
-        self.display_image = None # отображаемая картинка в Canvas
-        self.ph = None # отображаемый прямоугольник поверх объекта
-        self.rect = None # прямоугольник для обводки объекта мнемосхемы под курсором
-
     def buildWindow(self):
         """
             Функция построения окна программы
         """
-        self.window.title("Автомнемо")
-        self.window.geometry('1000x650')
-
-        # Вкладки:
-        self.tab_control.add(self.tab1, text = 'Скриншот мнемосземы')
-        self.tab_control.add(self.tab2, text = 'Обнаруженные объекты')
-        self.tab_control.add(self.tab3, text = 'Обнаруженные линии')
-        self.tab_control.pack(expand = 1, fill = 'both')
-
         # Главное меню:
         menu = Menu(self.window)
         new_item = Menu(menu)

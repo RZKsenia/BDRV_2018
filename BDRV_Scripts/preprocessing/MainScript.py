@@ -6,11 +6,11 @@ import io
 class Modeller(object):
 
     def __init__(self):
-        self.directory = 'C:\\Python_projects\\BDRV\\images'
-        self.training_directory = 'C:\\Python_projects\\BDRV\\images\\training'
-        self.testing_directory = 'C:\\Python_projects\\BDRV\\images\\test'
-        self.model_dir = 'C:\\Python_projects\\BDRV\\model\\'
-        self.result_folder = 'C:\\Python_projects\\BDRV\\test\\result'
+        self.directory = r'C:/Python_projects/BDRV2/images'
+        self.training_directory = r'C:/Python_projects/BDRV2/images/training'
+        self.testing_directory = r'C:/Python_projects/BDRV2/images/test'
+        self.model_dir = r'C:/Python_projects/BDRV2/model'
+        self.result_folder = r'C:/Python_projects/BDRV2/test'
 
         self.lines_colors = []  # Цвета линий, связыаающих объекты на мнемосхеме
         self.obj_colors = {} # словарь цветов объектов
@@ -57,7 +57,7 @@ class Modeller(object):
                             validation_data=validation_generator,
                             verbose=1)
 
-        model.save(self.model_dir + 'trained_model.h5')
+        model.save(self.model_dir + r'/trained_model.h5')
         print('Обучение и сохранение модели завершено')
 
     def CreateAndTrainModel(self):
@@ -98,7 +98,7 @@ class Modeller(object):
                             validation_data=validation_generator,
                             verbose=1)
 
-        model.save(self.model_dir + 'trained_model.h5')
+        model.save(self.model_dir + r'/trained_model.h5')
         print ('Обучение и сохранение модели завершено')
 
     def viewImage(self, image):
@@ -413,12 +413,12 @@ class Modeller(object):
         Функция анализа скриншота. Результатом будет картинка, на которой будут
         выделены контуры найденных объектов.
         """
-        folder_contours = "C:\\Python_projects\\BDRV\\test\\images_by_contours\\"
+        folder_contours = r"C:/Python_projects/BDRV2/test/images_by_contours/"
 
         coloredImage = cv2.imread(filename2)
         coloredImageRender = cv2.imread(filename2)
         image3 = self.workWithLinesFromColored(coloredImage, 'remove') # удаляем линии
-        cv2.imwrite(self.result_folder + '\\without_lines.png', image3)  # записываем файл
+        cv2.imwrite(self.result_folder + r'/without_lines.png', image3)  # записываем файл
         #img_lines = self.workWithLinesFromColored(coloredImage) # вычленяем линии
 
         # Размываем изображение, конвертируем его в чёрно-белое и находим контуры объектов:
@@ -442,7 +442,7 @@ class Modeller(object):
         contours_to_draw = self.mergeContours()
 
         # Восстановим в точности ту же модель, включая веса и оптимизатор
-        new_model = tf.keras.models.load_model(self.model_dir + 'trained_model.h5')
+        new_model = tf.keras.models.load_model(self.model_dir + r'/trained_model.h5')
 
         # Рассматриваем каждый найденный объект и проверяем - к какому классу
         # объектов он принадлежит:
@@ -481,5 +481,7 @@ class Modeller(object):
                 cv2.imwrite(folder_contours + str(pd) + "_" + str(index) + ".png", new_img) # записываем файл
             index += 1
 
-        cv2.imwrite(self.result_folder + '\\result.png', coloredImageRender)  # записываем файл
-        return (self.result_folder + '\\result.png')
+        filename_res = self.result_folder + r'/result.png'
+        if not cv2.imwrite(filename_res, coloredImageRender):  # записываем файл
+            raise Exception("Не удаётся сохранить файл")
+        return (filename_res)
