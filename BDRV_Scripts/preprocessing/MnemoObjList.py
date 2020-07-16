@@ -59,8 +59,8 @@ class MnemoObjList(object):
         """
         el = self.head
         while el != None:
-            # print('el.key.x = ', el.key.x, 'el.key.y = ', el.key.y)
-            if el.key.x < x < el.key.width + el.key.x:
-                if el.key.y < y < el.key.height + el.key.y:
-                    return el.key
+            if  el.key.x <= x <= (el.key.x + el.key.width):
+                if el.key.y <= y <= (el.key.y + el.key.height):
+                    return el.key # возвращаем найденный объект
             el = el.next
+        return None

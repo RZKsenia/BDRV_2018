@@ -21,7 +21,9 @@ class GUI(object):
         self.ph = None  # отображаемый прямоугольник поверх объекта
         self.rect = None  # прямоугольник для обводки объекта мнемосхемы под курсором
 
-        self.mnemo_obj_list = MnemoObjList()
+        self.mnemo_obj_list = MnemoObjList() # объекты мнемосхемы
+        self.mnemo_obj_list_selected = MnemoObjList() # выделенные объекты мнемосхемы
+        self.key_pressed_code = None # код нажатой клавиши
         self.Md = Modeller()  # класс для работы с нейросетью
 
         self.window = Tk() # главное окно интерфейса
@@ -109,7 +111,7 @@ class GUI(object):
         self.btnDelObj.pack(side=LEFT)
 
         # Вкладки:
-        self.tab_control.add(self.tab1, text='Скриншот мнемосземы')
+        self.tab_control.add(self.tab1, text='Скриншот мнемосхемы')
         self.tab_control.add(self.tab2, text='Обнаруженные объекты')
         self.tab_control.add(self.tab3, text='Обнаруженные линии')
         self.tab_control.pack(expand=1, fill='both')
@@ -140,24 +142,24 @@ class GUI(object):
                 row = config.readline()
             config.close()
 
-    def buildWindow(self):
+    def build_window(self):
         """
             Функция построения окна программы
         """
         # Главное меню:
         menu = Menu(self.window)
         new_item = Menu(menu)
-        new_item.add_command(label = 'Загрузить скриншот мнемосхемы', command = lambda: self.uploadScreenshot(self))
-        new_item.add_command(label = 'Запустить обнаружение объектов', command = lambda: self.detectObjects(self))
-        new_item.add_command(label = 'Сохранить найденные контуры в файл', command=lambda: self.saveFoundContours(self))
-        new_item.add_command(label = 'Открыть файл с контурами', command=lambda: self.openFoundContours(self))
+        new_item.add_command(label = 'Загрузить скриншот мнемосхемы', command = lambda: self.upload_screenshot(self))
+        new_item.add_command(label = 'Запустить обнаружение объектов', command = lambda: self.detect_objects(self))
+        new_item.add_command(label = 'Сохранить найденные контуры в файл', command=lambda: self.save_found_contours(self))
+        new_item.add_command(label = 'Открыть файл с контурами', command=lambda: self.open_found_contours(self))
 
         menu.add_cascade(label = 'Файл', menu=new_item)
         self.window.config(menu = menu)
 
         self.window.mainloop()
 
-    def uploadScreenshot(self, file=None):
+    def upload_screenshot(self, file=None):
         """
         Функция команды меню - Загрузить файл мнемосхемы.
         Загружается файл и выводится на первую вкладку в окне программы
@@ -173,9 +175,9 @@ class GUI(object):
         screenshot = Image.open(filename)
         self.uploadedScreenshot = filename # сохраняем путь к скриншоту для дальнейшего использования
 
-        self.uploadImage(self, screenshot, tab)
+        self.upload_image(self, screenshot, tab)
 
-    def detectObjects(self):
+    def detect_objects(self):
         """
         Функция обнаружения объектов на скриншоте
         """
@@ -188,9 +190,9 @@ class GUI(object):
             self.image_with_objects = self.Md.analizeScreenshot(self.uploadedScreenshot)
             screenshot = Image.open(self.image_with_objects)
             # messagebox.showinfo('Обнаружение объектов', 'Обработка скриншота завершена')
-            self.uploadImage(self, screenshot, self.tab2) # выводим результат анализа скриншота
+            self.upload_image(self, screenshot, self.tab2) # выводим результат анализа скриншота
 
-    def uploadImage(self, screenshot, tab_obj):
+    def upload_image(self, screenshot, tab_obj):
         """
         Функция вывода изображения (screenshot) на вкладку (tab)
         """
@@ -214,8 +216,10 @@ class GUI(object):
         self.canvas_with_objects.create_image(screenshot.width / 2, screenshot.height / 2,
                                                               image=self.display_image)
 
-        # отслеживаем координаты курсора:
-        self.canvas_with_objects.bind("<Motion>", lambda event: self.onOverTheObjectMove(self))
+        # отслеживаем координаты курсора, нажатые клавиши:
+        self.canvas_with_objects.bind("<Motion>", lambda event: self.on_over_the_object_move(self, event))
+        self.canvas_with_objects.bind("<Button-1>", lambda event: self.on_click_on_canvas(self, event))
+
         # полосы прокрутки:
         vbar.config(command=self.canvas_with_objects.yview)
         hbar.config(command=self.canvas_with_objects.xview)
@@ -227,9 +231,9 @@ class GUI(object):
             mn_list_el = MnemoObjList() # новый элемент списка
             mn_list_el.key = mn_obj
             self.mnemo_obj_list.insert(mn_list_el)  # вставляем объект в список
-            self.insertObjIntoTree(self, mn_obj=mn_obj) # вставляем объект в дерево объектов
+            self.insert_obj_into_tree(self, mn_obj=mn_obj) # вставляем объект в дерево объектов
 
-    def insertObjIntoTree(self, mn_obj):
+    def insert_obj_into_tree(self, mn_obj):
         """
         Вставить объект в дерево объектов.
         mn_obj: объект типа MnemoObj
@@ -258,7 +262,15 @@ class GUI(object):
                                 self.obj_tree.insert(self.folder7, "end", mn_obj.obj_name, text=mn_obj.obj_name,
                                                      values=(mn_obj.x, mn_obj.y))
 
-    def onOverTheObjectMove(self):
+    def select_objects_in_tree(self, mn_obj):
+        """
+        Выделить объекты в дереве объектов
+        """
+        if len(self.obj_tree.selection()) > 0:
+            self.obj_tree.selection_remove(self.obj_tree.selection()[0])
+        self.obj_tree.selection_add(mn_obj.obj_name)
+
+    def on_over_the_object_move(self, event):
         """
         При наведении курсора мыши на объект мнемосхемы - он выделяется
         в дереве объектов, а также выделяется цветом на самой мнемосхеме
@@ -266,11 +278,8 @@ class GUI(object):
         # удаляем нарисованные ранее прямоугольники:
         self.canvas_with_objects.delete(self.canvas_with_objects.find_withtag('rect'))
         if self.mnemo_obj_list != None:
-            # Считываем координаты курсора мыши:
-            x = self.window.winfo_pointerx() - self.window.winfo_rootx()
-            y = self.window.winfo_pointery() - self.window.winfo_rooty()
             # находим - есть ли объект мнемосхемы по этим координатам:
-            mn_obj = self.mnemo_obj_list.search_coord(x,y)
+            mn_obj = self.mnemo_obj_list.search_coord(event.x, event.y)
             # Если объект мнемосхемы найден:
             if mn_obj != None:
                 # курсор попал на объект - обводим его прямоугольником
@@ -281,7 +290,29 @@ class GUI(object):
                                                                  width = 5,
                                                                  tag = 'rect')
 
-    def saveFoundContours(self):
+    def on_click_on_canvas(self, event):
+        """
+        Обработка клика
+        Если кликнули по какому-то объекту, то в соответствующие
+        элементы управления выводим информацию об объекте, а также
+        выделяем его в дереве объектов
+        """
+        if self.mnemo_obj_list != None:
+            # находим - есть ли объект мнемосхемы по этим координатам:
+            mn_obj = self.mnemo_obj_list.search_coord(event.x, event.y)
+            # очищаем элементы управления:
+            self.txtObjName.delete(0, 'end')
+            self.cmbxObjType.delete(0, 'end')
+            if mn_obj != None:
+                # если по координатам найден объект мнемосхемы,
+                # то прописываем значения его свойств в элементы управления.
+                # Имя объекта (уникально):
+                self.txtObjName.insert(index = 0, string = mn_obj.obj_name)
+                # тип объекта:
+                self.cmbxObjType.insert(index = 0, string= mn_obj.type)
+                self.select_objects_in_tree(self, mn_obj=mn_obj)
+
+    def save_found_contours(self):
         """
         Сохранить найденные контуры и путь к сохранённой картинке/
         Первой строкой в файле будет путь к картинке с нарисованными контурами.
@@ -304,7 +335,7 @@ class GUI(object):
                     file.write(str_to_write)
                 file.close()
 
-    def openFoundContours(self):
+    def open_found_contours(self):
         """
         Загрузить картинку с сохранёнными ранее контурами,
         а также перечень контуров
@@ -318,7 +349,7 @@ class GUI(object):
                 file_rows = file.readlines()
 
                 self.uploadedScreenshot = file_rows[0].rstrip('\n') # считываем путь к картинке с контурами
-                self.uploadScreenshot(self, file = self.uploadedScreenshot) # выводим на экран картинку с найденными контурами
+                self.upload_screenshot(self, file = self.uploadedScreenshot) # выводим на экран картинку с найденными контурами
                 self.window.title('Автомнемо - ' + self.uploadedScreenshot)
 
                 for index in range (1, len(file_rows)):
@@ -327,7 +358,7 @@ class GUI(object):
                     mn_list_el = MnemoObjList()  # новый элемент списка
                     mn_list_el.key = mn_obj
                     self.mnemo_obj_list.insert(mn_list_el)  # вставляем объект в список
-                    self.insertObjIntoTree(self, mn_obj = mn_obj)
+                    self.insert_obj_into_tree(self, mn_obj = mn_obj)
                 file.close()
 
             # прорисовываем рамки обнаруженных объектов
@@ -347,5 +378,5 @@ class GUI(object):
 
 gui = GUI
 gui.__init__(GUI)
-gui.buildWindow(GUI)
+gui.build_window(GUI)
 gui.window.mainloop()
