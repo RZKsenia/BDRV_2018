@@ -3,6 +3,7 @@ from tkinter import filedialog
 from tkinter import messagebox
 from tkinter import ttk
 import io
+import time
 
 from PIL import Image, ImageTk
 
@@ -22,6 +23,7 @@ class GUI(object):
         self.rect = None  # прямоугольник для обводки объекта мнемосхемы под курсором
         self.dd_x_coord_begin = 0 # х координата начала Drag&Drop
         self.dd_y_coord_begin = 0 # y координата начала Drag&Drop
+        self.btn_pushed = 0 # 1 если левая кнопка мыши нажата, 0 если отжата
 
         self.mnemo_obj_list = MnemoObjList() # объекты мнемосхемы
         self.current_mn_obj = None # текущий выделенный мышью объект мнемосхемы
@@ -110,6 +112,8 @@ class GUI(object):
         self.frame_right_menu_sub3.pack(side=TOP)
         self.btnSaveObj = ttk.Button(self.frame_right_menu_sub3, text='Сохранить изменения')
         self.btnSaveObj.pack(side=LEFT)
+        self.btnMergeObjects = ttk.Button(self.frame_right_menu_sub3, text='Объеденить объекты')
+        self.btnMergeObjects.pack(side=LEFT)
         self.btnDelObj = ttk.Button(self.frame_right_menu_sub3, text='Удалить объект')
         self.btnDelObj.pack(side=LEFT)
 
@@ -225,9 +229,9 @@ class GUI(object):
         self.canvas_with_objects.bind("<Button-1>", lambda event: self.on_click_on_canvas(self, event))
         self.canvas_with_objects.bind("<ButtonRelease-1>", lambda event: self.end_drag_and_drop(self, event))
         self.btnSaveObj.bind("<Button-1>", lambda event: self.save_changes_in_object(self, event))
-        self.obj_tree.bind("<ButtonRelease-1>", lambda event: self.on_click_on_tree(self, event))
+        self.btnMergeObjects.bind("<Button-1>", lambda event: self.merge_objects(self, event))
         self.btnDelObj.bind("<Button-1>", lambda event: self.delete_selected_object(self, event))
-
+        self.obj_tree.bind("<ButtonRelease-1>", lambda event: self.on_click_on_tree(self, event))
 
         # полосы прокрутки:
         vbar.config(command=self.canvas_with_objects.yview)
@@ -311,7 +315,7 @@ class GUI(object):
         mn_onj_name = selected_obj_name[0]
         searched_obj = self.mnemo_obj_list.search_by_obj_name(mn_onj_name)
 
-        if (self.mnemo_obj_list != None) & (searched_obj != None):
+        if (self.mnemo_obj_list is not None) & (searched_obj is not None):
             # список объектов мнемосхемы не пуст, и среди объектов найден выделенный
             # обводим объект белым прямоугольником:
             self.on_over_the_object_move(self, event, obj_name= mn_onj_name)
@@ -325,7 +329,7 @@ class GUI(object):
         удаляем все элементы дочерние из дерева объектов
         """
         el = self.mnemo_obj_list.head
-        while el != None:
+        while el is not None:
             self.obj_tree.delete(el.key.obj_name) # удаляем объект по имени
             el = el.next
 
@@ -334,7 +338,7 @@ class GUI(object):
         обновление дерева объектов
         """
         el = self.mnemo_obj_list.head
-        while el != None:
+        while el is not None:
             self.insert_obj_into_tree(self, mn_obj=el.key) # вставляем объект в дерево
             el = el.next
 
@@ -343,14 +347,25 @@ class GUI(object):
         При наведении курсора мыши на объект мнемосхемы - он выделяется
         в дереве объектов, а также выделяется цветом на самой мнемосхеме
         """
-        if self.mnemo_obj_list != None:
+        if self.btn_pushed == 1:
+            # рисуем прямоугольник выделения
+            self.canvas_with_objects.delete("selector")
+            self.canvas_with_objects.create_rectangle(self.dd_x_coord_begin,
+                                                      self.dd_y_coord_begin,
+                                                      event.x,
+                                                      event.y,
+                                                      outline='yellow',
+                                                      width=1,
+                                                      tag="selector")
+
+        if self.mnemo_obj_list is not None:
             # находим - есть ли объект мнемосхемы по этим координатам:
             if obj_name == None:
                 mn_obj = self.mnemo_obj_list.search_coord(event.x, event.y)
             else:
                 mn_obj = self.mnemo_obj_list.search_by_obj_name(obj_name)
             # Если объект мнемосхемы найден:
-            if mn_obj != None:
+            if mn_obj is not None:
                 self.paint_white_rectangle_around_object(self, event, mn_obj= mn_obj)
             else:
                 # удаляем нарисованный ранее белый прямоугольник:
@@ -373,41 +388,29 @@ class GUI(object):
     def repaint_frames_around_objects(self):
         """
         перерисовка рамок вокруг объектов мнемосхемы
+        tag_addition - приставка, которая если не пуста, используется для выделенных объектов
+        selection_color - цвет выделения объектов
         """
-        # прорисовываем рамки обнаруженных
-        if self.mnemo_obj_list != None:
+        # прорисовываем рамки обнаруженных     
+        if self.mnemo_obj_list is not None:
             cur_val = self.mnemo_obj_list.head
-            while cur_val != None:
-                color = self.obj_colors[cur_val.key.type]  # получаем цвет рамки в зависимости от типа объекта
+
+            while cur_val is not None:
+                if cur_val.key.selected_flag == 0:
+                    color = self.obj_colors[cur_val.key.type]  # получаем цвет рамки в зависимости от типа объекта
+                    tag = cur_val.key.type + '-' + cur_val.key.obj_name
+                else:
+                    color = "aqua"
+                    tag = "selected-" + cur_val.key.obj_name
                 # обводим объекты рамками:
                 self.canvas_with_objects.create_rectangle(cur_val.key.x,
                                                           cur_val.key.y,
                                                           cur_val.key.x + cur_val.key.width,
                                                           cur_val.key.y + cur_val.key.height,
-                                                          outline=color,
-                                                          width=3,
-                                                          tag=cur_val.key.obj_name)
+                                                          outline= color,
+                                                          width= 3,
+                                                          tag= tag)
                 cur_val = cur_val.next
-
-    def paint_selected_objects(self):
-        """
-        обводим выделенные объекты (группу объектов)
-        """
-        # удаляем нарисованные ранее прямоугольники:
-        self.canvas_with_objects.delete(self.canvas_with_objects.find_withtag('selected'))
-
-        cur_obj = self.mnemo_obj_list.head
-        while cur_obj != None:
-            # курсор попал на объект - обводим его прямоугольником
-            if cur_obj.key.selected_flag == 1:
-                self.rect = self.canvas_with_objects.create_rectangle(cur_obj.key.x, cur_obj.key.y,
-                                                                      cur_obj.key.x + cur_obj.key.width,
-                                                                      cur_obj.key.y + cur_obj.key.height,
-                                                                      outline='aqua',
-                                                                      width=3,
-                                                                      tag='selected-' + cur_obj.key.obj_name)
-
-            cur_obj = cur_obj.next
 
     def on_click_on_canvas(self, event):
         """
@@ -419,22 +422,25 @@ class GUI(object):
         # сохраняем координаты, т.к. это может быть начало Drag&Drop
         self.dd_x_coord_begin = event.x
         self.dd_y_coord_begin = event.y
+        self.btn_pushed = 1
 
-        if self.mnemo_obj_list != None:
+        if self.mnemo_obj_list is not None:
             # находим - есть ли объект мнемосхемы по этим координатам:
             mn_obj = self.mnemo_obj_list.search_coord(event.x, event.y)
-            if mn_obj != None:
+            if mn_obj is not None:
                 # если по координатам найден объект мнемосхемы,
                 # то прописываем значения его свойств в элементы управления.
                 self.fill_name_and_type_of_object(self, mn_obj= mn_obj)
                 self.select_objects_in_tree(self, mn_obj=mn_obj)
                 self.current_mn_obj = mn_obj
                 self.paint_white_rectangle_around_object(self, event, mn_obj= mn_obj)
+                self.lblXval['text'] = mn_obj.x
+                self.lblYval['text'] = mn_obj.y
             else:
                 mn_obj = self.mnemo_obj_list.head
                 # Проходим по списку объектов
                 # Если объект был выделен - снять выделение
-                while mn_obj != None:
+                while mn_obj is not None:
                     if mn_obj.key.selected_flag == 1:
                         mn_obj.key.selected_flag = 0
                         # удаляем прямоугольники, означающие выделение объектов:
@@ -453,8 +459,11 @@ class GUI(object):
         """
         dd_x_current = event.x
         dd_y_current = event.y
+        cntr = 0
+        self.btn_pushed = 0
+        self.canvas_with_objects.delete("selector")
 
-        if self.mnemo_obj_list != None:
+        if self.mnemo_obj_list is not None:
             # если список объектов не пуст
             cur_obj = self.mnemo_obj_list.head
             while cur_obj !=None:
@@ -464,9 +473,10 @@ class GUI(object):
                             (self.dd_y_coord_begin <= cur_obj.key.y + cur_obj.key.height <= dd_y_current):
                         # объект попал в периметр выделения
                         cur_obj.key.selected_flag = 1
+                        self.group_selected_flag = 1
+                        cntr += 1
                 cur_obj = cur_obj.next
-            self.group_selected_flag = 1
-            self.paint_selected_objects(self)
+            self.repaint_frames_around_objects(self)
 
     def delete_selected_object(self, event):
         """
@@ -475,34 +485,35 @@ class GUI(object):
         1) с помощью клика по объекту на картинке
         2) с помощью выделения объекта в дереве объектов
         """
-        if self.group_selected_flag == 0:
-            # удаляем еденичный выделенный объект:
-            if self.current_mn_obj != None:
-                self.delete_object(self,
-                                   mn_obj= self.current_mn_obj)
-                self.current_mn_obj = None
-        else:
-            # выделено сразу несколько объектов
-            list_obj = self.mnemo_obj_list.head
-            while list_obj != None:
-                if list_obj.key.selected_flag == 1:
-                    # удаляем нарисованные ранее прямоугольники:
-                    self.canvas_with_objects.delete(self.canvas_with_objects.find_withtag('selected-' + \
-                                                                                          list_obj.key.obj_name))
+        if self.mnemo_obj_list is not None:
+            if self.group_selected_flag == 0:
+                # удаляем еденичный выделенный объект:
+                if self.current_mn_obj is not None:
                     self.delete_object(self,
-                                       mn_obj= list_obj.key)
-                list_obj = list_obj.next
-                self.group_selected_flag = 0
+                                       mn_obj= self.current_mn_obj)
+                    self.current_mn_obj = None
+            else:
+                # выделено сразу несколько объектов
+                list_obj = self.mnemo_obj_list.head
+                while list_obj is not None:
+                    if list_obj.key.selected_flag == 1:
+                        # удаляем нарисованные ранее прямоугольники:
+                        self.canvas_with_objects.delete('selected-' + list_obj.key.obj_name)
+                        self.delete_object(self,
+                                           mn_obj= list_obj.key)
+                    list_obj = list_obj.next
+                    self.group_selected_flag = 0
 
     def delete_object(self, mn_obj):
         """
         функция удаления объекта
         """
         # удаляем нарисованные ранее прямоугольники:
-        obj_to_delete = self.canvas_with_objects.find_withtag(mn_obj.obj_name)
-        self.canvas_with_objects.delete(obj_to_delete) # удаляем объекты по тегу
+        tag = mn_obj.type + '-' + mn_obj.obj_name
+        self.canvas_with_objects.delete(tag)
         self.mnemo_obj_list.delete(self.mnemo_obj_list.search_by_object(mn_obj))  # удаляем объект из списка
         self.obj_tree.delete(mn_obj.obj_name) # удаляем объект из дерева объектов
+        self.repaint_frames_around_objects(self)
 
     def fill_name_and_type_of_object(self, mn_obj):
         """
@@ -553,42 +564,121 @@ class GUI(object):
         mn_obj = None
 
         # если список объектов не пуст:
-        if self.mnemo_obj_list != None:
-            if new_name != '':
-                # находим элемент в списке:
+        if self.mnemo_obj_list is not None:
+            # находим элемент в списке:
+            if self.group_selected_flag == 0:
                 mn_obj_list_el = self.mnemo_obj_list.search_by_object(self.current_mn_obj)
-                self.clear_tree(self)  # сперва дерево очищаем от объектов
+                if new_name != '':
+                    self.clear_tree(self)  # сперва дерево очищаем от объектов
 
-                # объект найден, но имя ему присвоено новое:
-                if mn_obj_list_el.key.obj_name != new_name:
-                    # сперва проверяем - уникально ли выбранное имя, и нет ли
-                    # в списке уже объекта с таким именем:
-                    searched_obj = self.mnemo_obj_list.search_by_obj_name(new_name)
+                    # объект найден, но имя ему присвоено новое:
+                    if mn_obj_list_el.key.obj_name != new_name:
+                        # сперва проверяем - уникально ли выбранное имя, и нет ли
+                        # в списке уже объекта с таким именем:
+                        searched_obj = self.mnemo_obj_list.search_by_obj_name(new_name)
 
-                    if searched_obj != None:
-                        # какой-то объект с таким имеем найден
-                        if mn_obj_list_el.key != searched_obj:
-                            # объекты не совпадают. Значит имя не уникально
-                            messagebox.showinfo("Объект с указанным именем уже есть в списке.",
-                                                "Укажите уникальное имя объекта")
-                    else:
-                        # никакого объекта с новым именем нет в списке,
-                        # значит имя уникально и можно его обновить для
-                        # текущего выделенного объекта:
-                        # удаляем нарисованные ранее прямоугольники:
-                        self.canvas_with_objects.addtag_withtag(new_name,
-                                                                self.current_mn_obj.obj_name)
-                        mn_obj_list_el.key.obj_name = new_name # обновлляем имя объекта
-                        self.current_mn_obj.obj_name = new_name
+                        if searched_obj is not None:
+                            # какой-то объект с таким имеем найден
+                            if mn_obj_list_el.key != searched_obj:
+                                # объекты не совпадают. Значит имя не уникально
+                                messagebox.showinfo("Объект с указанным именем уже есть в списке.",
+                                                    "Укажите уникальное имя объекта")
+                        else:
+                            # никакого объекта с новым именем нет в списке,
+                            # значит имя уникально и можно его обновить для
+                            # текущего выделенного объекта:
+                            # удаляем нарисованные ранее прямоугольники:
+                            self.canvas_with_objects.addtag_withtag(new_name,
+                                                                    self.current_mn_obj.obj_name)
+                            mn_obj_list_el.key.obj_name = new_name # обновлляем имя объекта
+                            self.current_mn_obj.obj_name = new_name
 
                 # если новый тип объекта:
                 if mn_obj_list_el.key.type != new_obj_type:
                     mn_obj_list_el.key.type = new_obj_type # обновляем тип объекта
                     self.repaint_frames_around_objects(self) # перерисовываем рамки объектов, т.к. тип изменился
 
-                self.refresh_tree(self)  # обновляем дерево
+                    self.refresh_tree(self)  # обновляем дерево
+                else:
+                    messagebox.showinfo("Имя объекта не может быть пустым", "Укажите уникальное имя объекта")
             else:
-                messagebox.showinfo("Имя объекта не может быть пустым", "Укажите уникальное имя объекта")
+                # выделено несколько объектов мнемосхемы.
+                # В таком случае мы можем менять у них только тип
+                cur_obj = self.mnemo_obj_list.head
+
+                while cur_obj is not None:
+                    if cur_obj.key.selected_flag == 1:
+                        # объект выделен
+                        if new_obj_type != "":
+                            cur_obj.key.type = new_obj_type
+                    cur_obj = cur_obj.next
+
+    def merge_objects(self, event):
+        """
+        объединение группы объектов в один объект
+        """
+        if (self.mnemo_obj_list is not None) and (self.group_selected_flag == 1):
+            new_work_list = MnemoObjList() # новый временный список для хранения выделенных объектов
+            cur_obj_of_list = self.mnemo_obj_list.head
+
+            while cur_obj_of_list is not None:
+                if cur_obj_of_list.key.selected_flag == 1:
+                    # объект выделен
+                    new_list_el = MnemoObjList()
+                    # создаём новый объект и помещаем его в список:
+                    new_el = MnemoObj([
+                        cur_obj_of_list.key.obj_name,
+                        cur_obj_of_list.key.type,
+                        cur_obj_of_list.key.x,
+                        cur_obj_of_list.key.y,
+                        cur_obj_of_list.key.width,
+                        cur_obj_of_list.key.height
+                    ])
+                    new_list_el.key = new_el
+                    new_work_list.insert(new_list_el) # вставляем объект во временный список
+                    # удаляем нарисованные прямоугольник выделенного объекта:
+                    self.canvas_with_objects.delete('selected-' + cur_obj_of_list.key.obj_name)
+                    # удаляем выделенный объект из дерева объектов, списка объектов и удаляем
+                    # прямоугольник вокруг объекта:
+                    self.delete_object(self, mn_obj=cur_obj_of_list.key)
+                cur_obj_of_list = cur_obj_of_list.next
+
+            cur_obj_of_list = new_work_list.head
+            min_x = cur_obj_of_list.key.x
+            min_y = cur_obj_of_list.key.y
+            max_x = cur_obj_of_list.key.x + cur_obj_of_list.key.width
+            max_y = cur_obj_of_list.key.y + cur_obj_of_list.key.height
+            new_type = cur_obj_of_list.key.type
+            new_name = 'object-' + str(time.perf_counter()) # задаём уникальное имя объекта
+
+            while cur_obj_of_list is not None:
+                # определяем самый левый и самый верхний предел контуров:
+                if cur_obj_of_list.key.x < min_x:
+                    min_x = cur_obj_of_list.key.x
+                if cur_obj_of_list.key.y < min_y:
+                    min_y = cur_obj_of_list.key.y
+                # определяем самый правый и самый нижний предел контуров:
+                if (cur_obj_of_list.key.x + cur_obj_of_list.key.width) > max_x:
+                    max_x = cur_obj_of_list.key.x + cur_obj_of_list.key.width
+                if (cur_obj_of_list.key.y + cur_obj_of_list.key.height) > max_y:
+                    max_y = cur_obj_of_list.key.y + cur_obj_of_list.key.height
+                cur_obj_of_list = cur_obj_of_list.next
+
+            new_work_list = None
+            # создаём новый объект
+            new_obj = MnemoObj([new_name,
+                                new_type,
+                                min_x,
+                                min_y,
+                                max_x - min_x,
+                                max_y - min_y])
+            new_obj_list = MnemoObjList()
+            new_obj_list.key = new_obj
+            self.mnemo_obj_list.insert(new_obj_list) #вставляем новый объект в список объектов
+            self.insert_obj_into_tree(self, mn_obj=new_obj_list.key)
+            self.repaint_frames_around_objects(self)
+            self.group_selected_flag = 0
+            self.btn_pushed = 0
 
     def open_found_contours(self):
         """
