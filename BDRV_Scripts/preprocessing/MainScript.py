@@ -1,7 +1,7 @@
 import numpy as np
 import tensorflow as tf
 import cv2
-import io
+import time
 
 class Modeller(object):
 
@@ -418,7 +418,7 @@ class Modeller(object):
         coloredImage = cv2.imread(filename2)
         coloredImageRender = cv2.imread(filename2)
         image3 = self.workWithLinesFromColored(coloredImage, 'remove') # удаляем линии
-        cv2.imwrite(self.result_folder + r'/without_lines.png', image3)  # записываем файл
+        cv2.imwrite(self.result_folder + r'/without_lines.png', image3)  # записываем файл для контроля
         #img_lines = self.workWithLinesFromColored(coloredImage) # вычленяем линии
 
         # Размываем изображение, конвертируем его в чёрно-белое и находим контуры объектов:
@@ -476,12 +476,8 @@ class Modeller(object):
                 predictions = new_model.predict(img2, batch_size=6)
                 # определяем тип объекта, обведённого текущим контуром:
                 pd = self.GetTypeOfObject(predictions, coloredImageRender, x, y, w, h)
-                obj_title = 'object-'+str(index)
+                obj_title = 'object-'+str(time.clock())
                 self.contours_list.append([obj_title, pd, x, y, w, h])  # записываем тип контура, его коорд. и размеры
                 cv2.imwrite(folder_contours + str(pd) + "_" + str(index) + ".png", new_img) # записываем файл
             index += 1
-
-        filename_res = self.result_folder + r'/result.png'
-        if not cv2.imwrite(filename_res, coloredImageRender):  # записываем файл
-            raise Exception("Не удаётся сохранить файл")
-        return (filename_res)
+        return

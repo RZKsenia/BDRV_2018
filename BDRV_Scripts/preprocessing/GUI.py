@@ -7,16 +7,17 @@ import time
 
 from PIL import Image, ImageTk
 
-from BDRV_Scripts.preprocessing.MainScript import Modeller
-from BDRV_Scripts.preprocessing.MnemoObj import MnemoObj
-from BDRV_Scripts.preprocessing.MnemoObjList import MnemoObjList
+from BDRV_Scripts.preprocessing.MainScript import Modeller # класс для работы с нейросетью
+from BDRV_Scripts.preprocessing.MnemoObj import MnemoObj # класс объекта мнемосхемы
+from BDRV_Scripts.preprocessing.MnemoObjList import MnemoObjList # класс списка объектов мнемосхемы
+from BDRV_Scripts.preprocessing.SVGBuilder import SVGBuilder # класс генерации и экспорта мнемосхемы в SVG
 
 class GUI(object):
     def __init__(self):
         self.path_to_config_file = r'C:/Python_projects/BDRV2/config/bdrv_config.txt'
         self.path_to_uploaded_screenshot = '' # здесь будем хранить путь к скриншоту мнемосхемы
         self.obj_colors = {}  # словарь для хранения цветов объектов
-        self.path_to_image_with_objects = None  # путь к изображению с обнаруженными объектами
+        self.path_to_image_with_objects = ""  # путь к изображению с обнаруженными объектами
         self.canvas_with_objects = None  # канва, на которой работаем с найденными объектами
         self.display_image = None  # отображаемая картинка в Canvas
         self.ph = None  # отображаемый прямоугольник поверх объекта
@@ -24,6 +25,7 @@ class GUI(object):
         self.dd_x_coord_begin = 0 # х координата начала Drag&Drop
         self.dd_y_coord_begin = 0 # y координата начала Drag&Drop
         self.btn_pushed = 0 # 1 если левая кнопка мыши нажата, 0 если отжата
+        self.create_object = 0 # 1 - начинаем создавать объект
 
         self.mnemo_obj_list = MnemoObjList() # объекты мнемосхемы
         self.current_mn_obj = None # текущий выделенный мышью объект мнемосхемы
@@ -33,13 +35,17 @@ class GUI(object):
 
         self.window = Tk() # главное окно интерфейса
         self.frame_right_menu = ttk.Frame(self.window, width=200)
+        self.frame_right_menu_object_properties = ttk.Frame(self.frame_right_menu)
+        vbar = Scrollbar(self.frame_right_menu, orient=VERTICAL)
+        vbar.pack(side=RIGHT, fill=Y)
         self.tab_control = ttk.Notebook(self.window)  # вкладки на главном окне
         self.lbl_tree = ttk.Label(self.frame_right_menu, text='Объекты мнемосхемы:')
         self.obj_tree = ttk.Treeview(self.frame_right_menu)
-        self.frame_right_menu_sub = ttk.Frame(self.frame_right_menu)
+
         self.window.title("Автомнемо")
         self.window.geometry('1000x650')
 
+        self.obj_tree.configure(yscrollcommand=vbar.set)
         self.frame_right_menu.pack(side=RIGHT, fill=Y)
 
         self.tab1 = ttk.Frame(self.tab_control)
@@ -49,6 +55,7 @@ class GUI(object):
         self.lbl_tree.pack(side=TOP)
 
         self.obj_tree.master = self.frame_right_menu
+
         self.obj_tree["columns"] = ("one", "two", "three")
         self.obj_tree.column("#0", width=100, minwidth=20)
         self.obj_tree.column("one", width=70, minwidth=10)
@@ -69,23 +76,21 @@ class GUI(object):
         self.folder7 = self.obj_tree.insert("", 6, "text", text="Текст", values=("text", "", ""))
         self.obj_tree.pack(side=TOP)
 
-        self.frame_right_menu_sub.pack(side=TOP)
-        self.lbl_mn_obj = ttk.Label(self.frame_right_menu_sub, text='Свойства объекта:')
+        self.frame_right_menu_object_properties.pack(side=TOP)
+        self.lbl_mn_obj = ttk.Label(self.frame_right_menu_object_properties, text='Свойства объекта:')
         self.lbl_mn_obj.pack(side=TOP)
 
-        self.frame_right_menu_sub0 = ttk.Frame(self.frame_right_menu)
-        self.frame_right_menu_sub0.pack(side=TOP)
-        self.frame_right_menu_sub00 = ttk.Frame(self.frame_right_menu)
-        self.frame_right_menu_sub00.pack(side=TOP)
-        self.lbl_objName = ttk.Label(self.frame_right_menu_sub00, text='Имя объекта:')
+        self.frame_right_menu_object_name_type = ttk.Frame(self.frame_right_menu)
+        self.frame_right_menu_object_name_type.pack(side=TOP)
+        self.lbl_objName = ttk.Label(self.frame_right_menu_object_name_type, text='Имя объекта:')
         self.lbl_objName.pack(side=LEFT)
-        self.txtObjName = ttk.Entry(self.frame_right_menu_sub00)
+        self.txtObjName = ttk.Entry(self.frame_right_menu_object_name_type)
         self.txtObjName.pack(side=LEFT)
-        self.frame_right_menu_sub1 = ttk.Frame(self.frame_right_menu_sub00)
-        self.frame_right_menu_sub1.pack(side=LEFT)
-        self.lblObjType = ttk.Label(self.frame_right_menu_sub1, text='Тип объекта:')
+        self.frame_right_menu_type = ttk.Frame(self.frame_right_menu_object_name_type)
+        self.frame_right_menu_type.pack(side=LEFT)
+        self.lblObjType = ttk.Label(self.frame_right_menu_type, text='Тип объекта:')
         self.lblObjType.pack(side=LEFT)
-        self.cmbxObjType = ttk.Combobox(self.frame_right_menu_sub1)
+        self.cmbxObjType = ttk.Combobox(self.frame_right_menu_type)
         self.cmbxObjType['values'] = ('collon',
                                       'heat-exchanger',
                                       'indicator',
@@ -95,27 +100,55 @@ class GUI(object):
                                       'text')
         self.cmbxObjType.pack(side=LEFT)
 
-        self.frame_right_menu_sub2 = ttk.Frame(self.frame_right_menu)
-        self.frame_right_menu_sub2.pack(side=TOP)
-        self.lblcoord = ttk.Label(self.frame_right_menu_sub2, text='Координаты объекта:')
+        self.frame_right_menu_object_coordinates = ttk.Frame(self.frame_right_menu)
+        self.frame_right_menu_object_coordinates.pack(side=TOP)
+        self.lblcoord = ttk.Label(self.frame_right_menu_object_coordinates, text='Координаты объекта:')
         self.lblcoord.pack(side=LEFT)
-        self.lblX = ttk.Label(self.frame_right_menu_sub2, text='x:')
+        self.lblX = ttk.Label(self.frame_right_menu_object_coordinates, text='x:')
         self.lblX.pack(side=LEFT)
-        self.lblXval = ttk.Label(self.frame_right_menu_sub2, text='')
+        self.lblXval = ttk.Label(self.frame_right_menu_object_coordinates, text='')
         self.lblXval.pack(side=LEFT)
-        self.lblY = ttk.Label(self.frame_right_menu_sub2, text='y:')
+        self.lblY = ttk.Label(self.frame_right_menu_object_coordinates, text='y:')
         self.lblY.pack(side=LEFT)
-        self.lblYval = ttk.Label(self.frame_right_menu_sub2, text='')
+        self.lblYval = ttk.Label(self.frame_right_menu_object_coordinates, text='')
         self.lblYval.pack(side=LEFT)
 
-        self.frame_right_menu_sub3 = ttk.Frame(self.frame_right_menu)
-        self.frame_right_menu_sub3.pack(side=TOP)
-        self.btnSaveObj = ttk.Button(self.frame_right_menu_sub3, text='Сохранить изменения')
+        self.frame_right_menu_buttons_region = ttk.Frame(self.frame_right_menu)
+        self.frame_right_menu_buttons_region.pack(side=TOP)
+        self.btnSaveObj = ttk.Button(self.frame_right_menu_buttons_region, text='Сохранить изменения')
         self.btnSaveObj.pack(side=LEFT)
-        self.btnMergeObjects = ttk.Button(self.frame_right_menu_sub3, text='Объеденить объекты')
+        self.btnMergeObjects = ttk.Button(self.frame_right_menu_buttons_region, text='Объеденить объекты')
         self.btnMergeObjects.pack(side=LEFT)
-        self.btnDelObj = ttk.Button(self.frame_right_menu_sub3, text='Удалить объект')
+        self.btnDelObj = ttk.Button(self.frame_right_menu_buttons_region, text='Удалить объект')
         self.btnDelObj.pack(side=LEFT)
+
+        self.frame_right_menu_create_object_region = ttk.Frame(self.frame_right_menu)
+        self.frame_right_menu_create_object_region.pack(side = TOP)
+        self.lblCreateObj = ttk.Label(self.frame_right_menu_create_object_region, text='Создать объект')
+        self.lblCreateObj.pack(side = TOP)
+        self.frame_right_menu_create_name_type = ttk.Frame(self.frame_right_menu_create_object_region)
+        self.frame_right_menu_create_name_type.pack(side = TOP)
+        self.frame_right_menu_create_name = ttk.Frame(self.frame_right_menu_create_name_type)
+        self.frame_right_menu_create_name.pack(side=LEFT)
+        self.lblCreateName = ttk.Label(self.frame_right_menu_create_name, text='Имя объекта:')
+        self.lblCreateName.pack(side=LEFT)
+        self.txtNewObjName = ttk.Entry(self.frame_right_menu_create_name)
+        self.txtNewObjName.pack(side=LEFT)
+        self.frame_right_menu_create_type = ttk.Frame(self.frame_right_menu_create_name_type)
+        self.frame_right_menu_create_type.pack(side=LEFT)
+        self.lblCreateType = ttk.Label(self.frame_right_menu_create_type, text='Тип объекта:')
+        self.lblCreateType.pack(side=LEFT)
+        self.cmbxNewObjType = ttk.Combobox(self.frame_right_menu_create_type)
+        self.cmbxNewObjType['values'] = ('collon',
+                                      'heat-exchanger',
+                                      'indicator',
+                                      'pump',
+                                      'tank',
+                                      'valve',
+                                      'text')
+        self.cmbxNewObjType.pack(side=LEFT)
+        self.btnCreateObj = ttk.Button(self.frame_right_menu_create_object_region, text='Создать объект')
+        self.btnCreateObj.pack(side = TOP)
 
         # Вкладки:
         self.tab_control.add(self.tab1, text='Скриншот мнемосхемы')
@@ -158,8 +191,11 @@ class GUI(object):
         new_item = Menu(menu)
         new_item.add_command(label = 'Загрузить скриншот мнемосхемы', command = lambda: self.upload_screenshot(self))
         new_item.add_command(label = 'Запустить обнаружение объектов', command = lambda: self.detect_objects(self))
+        new_item.add_separator()
         new_item.add_command(label = 'Сохранить найденные контуры в файл', command=lambda: self.save_found_contours(self))
         new_item.add_command(label = 'Открыть файл с контурами', command=lambda: self.open_found_contours(self))
+        new_item.add_separator()
+        new_item.add_command(label='Экспортировать в SVG', command=lambda: self.generate_svg_file(self))
 
         menu.add_cascade(label = 'Файл', menu=new_item)
         self.window.config(menu = menu)
@@ -194,10 +230,10 @@ class GUI(object):
         else:
             messagebox.showinfo('Обнаружение объектов', 'Поиск объектов может занять некоторое время. Подождите.')
             # проводим анализ загруженного скриншота:
-            self.path_to_image_with_objects = self.Md.analizeScreenshot(self.path_to_uploaded_screenshot)
-            screenshot = Image.open(self.path_to_image_with_objects)
-            # messagebox.showinfo('Обнаружение объектов', 'Обработка скриншота завершена')
-            self.upload_image(self, screenshot, self.tab2) # выводим результат анализа скриншота
+            self.Md.analizeScreenshot(self.path_to_uploaded_screenshot)
+            self.save_found_contours(self) #сохраняем найденные контуры
+            self.open_found_contours(self) # загружаем только что сохранённый файл и отображаем контуры
+            self.tab2.focus()
 
     def upload_image(self, screenshot, tab_obj):
         """
@@ -206,13 +242,13 @@ class GUI(object):
         frame = Frame(tab_obj)
         frame.pack(expand=True, fill=BOTH)
 
-        vbar = Scrollbar(frame, orient=VERTICAL)
-        vbar.pack(side=RIGHT, fill=Y)
-        hbar = Scrollbar(frame, orient=HORIZONTAL)
-        hbar.pack(side=BOTTOM, fill=X)
+        self.vbar = Scrollbar(frame, orient=VERTICAL)
+        self.vbar.pack(side=RIGHT, fill=Y)
+        self.hbar = Scrollbar(frame, orient=HORIZONTAL)
+        self.hbar.pack(side=BOTTOM, fill=X)
         self.canvas_with_objects = Canvas(frame,
-                                          yscrollcommand=vbar.set,
-                                          xscrollcommand=hbar.set)
+                                          yscrollcommand=self.vbar.set,
+                                          xscrollcommand=self.hbar.set)
         self.canvas_with_objects.pack(side=LEFT, expand=True, fill=BOTH)
 
         # Сохраняем картинку в переменную класса, чтобы сборщик мусора её не уничтожил раньше времени:
@@ -228,23 +264,17 @@ class GUI(object):
         self.canvas_with_objects.bind("<Motion>", lambda event: self.on_over_the_object_move(self, event))
         self.canvas_with_objects.bind("<Button-1>", lambda event: self.on_click_on_canvas(self, event))
         self.canvas_with_objects.bind("<ButtonRelease-1>", lambda event: self.end_drag_and_drop(self, event))
+
+        self.obj_tree.bind("<ButtonRelease-1>", lambda event: self.on_click_on_tree(self, event))
+
         self.btnSaveObj.bind("<Button-1>", lambda event: self.save_changes_in_object(self, event))
         self.btnMergeObjects.bind("<Button-1>", lambda event: self.merge_objects(self, event))
         self.btnDelObj.bind("<Button-1>", lambda event: self.delete_selected_object(self, event))
-        self.obj_tree.bind("<ButtonRelease-1>", lambda event: self.on_click_on_tree(self, event))
+        self.btnCreateObj.bind("<Button-1>", lambda event: self.create_new_object(self, event))
 
         # полосы прокрутки:
-        vbar.config(command=self.canvas_with_objects.yview)
-        hbar.config(command=self.canvas_with_objects.xview)
-
-        for index in range(len(self.Md.contours_list)):
-            # проходим по списку обнаруженных контуров
-            obj_title = 'object-' + str(index)
-            mn_obj = MnemoObj(self.Md.contours_list[index])  # создаём объект мнемосхемы
-            mn_list_el = MnemoObjList() # новый элемент списка
-            mn_list_el.key = mn_obj
-            self.mnemo_obj_list.insert(mn_list_el)  # вставляем объект в список
-            self.insert_obj_into_tree(self, mn_obj=mn_obj) # вставляем объект в дерево объектов
+        self.vbar.config(command=self.canvas_with_objects.yview)
+        self.hbar.config(command=self.canvas_with_objects.xview)
 
     def insert_obj_into_tree(self, mn_obj):
         """
@@ -348,20 +378,32 @@ class GUI(object):
         в дереве объектов, а также выделяется цветом на самой мнемосхеме
         """
         if self.btn_pushed == 1:
-            # рисуем прямоугольник выделения
-            self.canvas_with_objects.delete("selector")
-            self.canvas_with_objects.create_rectangle(self.dd_x_coord_begin,
-                                                      self.dd_y_coord_begin,
-                                                      event.x,
-                                                      event.y,
-                                                      outline='yellow',
-                                                      width=1,
-                                                      tag="selector")
+            if self.create_object == 0:
+                # рисуем прямоугольник выделения
+                self.canvas_with_objects.delete("selector")
+                self.canvas_with_objects.create_rectangle(self.dd_x_coord_begin,
+                                                          self.dd_y_coord_begin,
+                                                          self.canvas_with_objects.canvasx(event.x),
+                                                          self.canvas_with_objects.canvasy(event.y),
+                                                          outline='yellow',
+                                                          width=1,
+                                                          tag="selector")
+            else:
+                # рисуем прямоугольник выделения
+                self.canvas_with_objects.delete("selector")
+                self.canvas_with_objects.create_rectangle(self.dd_x_coord_begin,
+                                                          self.dd_y_coord_begin,
+                                                          self.canvas_with_objects.canvasx(event.x),
+                                                          self.canvas_with_objects.canvasy(event.y),
+                                                          outline='lime',
+                                                          width=1,
+                                                          tag="selector")
 
         if self.mnemo_obj_list is not None:
             # находим - есть ли объект мнемосхемы по этим координатам:
             if obj_name == None:
-                mn_obj = self.mnemo_obj_list.search_coord(event.x, event.y)
+                mn_obj = self.mnemo_obj_list.search_coord(self.canvas_with_objects.canvasx(event.x),
+                                                          self.canvas_with_objects.canvasy(event.y))
             else:
                 mn_obj = self.mnemo_obj_list.search_by_obj_name(obj_name)
             # Если объект мнемосхемы найден:
@@ -402,6 +444,7 @@ class GUI(object):
                 else:
                     color = "aqua"
                     tag = "selected-" + cur_val.key.obj_name
+                self.canvas_with_objects.delete(tag) # если объект был ранее создан, то удаляем его
                 # обводим объекты рамками:
                 self.canvas_with_objects.create_rectangle(cur_val.key.x,
                                                           cur_val.key.y,
@@ -420,35 +463,36 @@ class GUI(object):
         выделяем его в дереве объектов
         """
         # сохраняем координаты, т.к. это может быть начало Drag&Drop
-        self.dd_x_coord_begin = event.x
-        self.dd_y_coord_begin = event.y
+        self.dd_x_coord_begin = self.canvas_with_objects.canvasx(event.x)
+        self.dd_y_coord_begin = self.canvas_with_objects.canvasy(event.y)
         self.btn_pushed = 1
 
         if self.mnemo_obj_list is not None:
-            # находим - есть ли объект мнемосхемы по этим координатам:
-            mn_obj = self.mnemo_obj_list.search_coord(event.x, event.y)
-            if mn_obj is not None:
-                # если по координатам найден объект мнемосхемы,
-                # то прописываем значения его свойств в элементы управления.
-                self.fill_name_and_type_of_object(self, mn_obj= mn_obj)
-                self.select_objects_in_tree(self, mn_obj=mn_obj)
-                self.current_mn_obj = mn_obj
-                self.paint_white_rectangle_around_object(self, event, mn_obj= mn_obj)
-                self.lblXval['text'] = mn_obj.x
-                self.lblYval['text'] = mn_obj.y
-            else:
-                mn_obj = self.mnemo_obj_list.head
-                # Проходим по списку объектов
-                # Если объект был выделен - снять выделение
-                while mn_obj is not None:
-                    if mn_obj.key.selected_flag == 1:
-                        mn_obj.key.selected_flag = 0
-                        # удаляем прямоугольники, означающие выделение объектов:
-                        self.canvas_with_objects.delete(self.canvas_with_objects.find_withtag('selected-'+ \
-                                                                                              mn_obj.key.obj_name))
-                    mn_obj = mn_obj.next
-                self.group_selected_flag = 0
-                self.repaint_frames_around_objects(self)
+            if self.create_object == 0:
+                # находим - есть ли объект мнемосхемы по этим координатам:
+                mn_obj = self.mnemo_obj_list.search_coord(self.dd_x_coord_begin, self.dd_y_coord_begin)
+                if mn_obj is not None:
+                    # если по координатам найден объект мнемосхемы,
+                    # то прописываем значения его свойств в элементы управления.
+                    self.fill_name_and_type_of_object(self, mn_obj= mn_obj)
+                    self.select_objects_in_tree(self, mn_obj=mn_obj)
+                    self.current_mn_obj = mn_obj
+                    self.paint_white_rectangle_around_object(self, event, mn_obj= mn_obj)
+                    self.lblXval['text'] = mn_obj.x
+                    self.lblYval['text'] = mn_obj.y
+                else:
+                    mn_obj = self.mnemo_obj_list.head
+                    # Проходим по списку объектов
+                    # Если объект был выделен - снять выделение
+                    while mn_obj is not None:
+                        if mn_obj.key.selected_flag == 1:
+                            mn_obj.key.selected_flag = 0
+                            # удаляем прямоугольники, означающие выделение объектов:
+                            self.canvas_with_objects.delete(self.canvas_with_objects.find_withtag('selected-'+ \
+                                                                                                  mn_obj.key.obj_name))
+                        mn_obj = mn_obj.next
+                    self.group_selected_flag = 0
+                    self.repaint_frames_around_objects(self)
 
     def end_drag_and_drop(self, event):
         """
@@ -457,26 +501,27 @@ class GUI(object):
         мнемосхемы.
         Эта функция вызывается, когда левую кнопку мыши отпустили
         """
-        dd_x_current = event.x
-        dd_y_current = event.y
+        self.dd_x_current = self.canvas_with_objects.canvasx(event.x)
+        self.dd_y_current = self.canvas_with_objects.canvasy(event.y)
         cntr = 0
         self.btn_pushed = 0
-        self.canvas_with_objects.delete("selector")
+        if self.create_object == 0:
+            self.canvas_with_objects.delete("selector")
 
-        if self.mnemo_obj_list is not None:
-            # если список объектов не пуст
-            cur_obj = self.mnemo_obj_list.head
-            while cur_obj !=None:
-                if (self.dd_x_coord_begin <= cur_obj.key.x <= dd_x_current) and \
-                    (self.dd_x_coord_begin <= cur_obj.key.x + cur_obj.key.width <= dd_x_current):
-                    if (self.dd_y_coord_begin <= cur_obj.key.y <= dd_y_current) and \
-                            (self.dd_y_coord_begin <= cur_obj.key.y + cur_obj.key.height <= dd_y_current):
-                        # объект попал в периметр выделения
-                        cur_obj.key.selected_flag = 1
-                        self.group_selected_flag = 1
-                        cntr += 1
-                cur_obj = cur_obj.next
-            self.repaint_frames_around_objects(self)
+            if self.mnemo_obj_list is not None:
+                # если список объектов не пуст
+                cur_obj = self.mnemo_obj_list.head
+                while cur_obj !=None:
+                    if (self.dd_x_coord_begin <= cur_obj.key.x <= self.dd_x_current) and \
+                        (self.dd_x_coord_begin <= cur_obj.key.x + cur_obj.key.width <= self.dd_x_current):
+                        if (self.dd_y_coord_begin <= cur_obj.key.y <= self.dd_y_current) and \
+                                (self.dd_y_coord_begin <= cur_obj.key.y + cur_obj.key.height <= self.dd_y_current):
+                            # объект попал в периметр выделения
+                            cur_obj.key.selected_flag = 1
+                            self.group_selected_flag = 1
+                            cntr += 1
+                    cur_obj = cur_obj.next
+                self.repaint_frames_around_objects(self)
 
     def delete_selected_object(self, event):
         """
@@ -536,18 +581,34 @@ class GUI(object):
         """
         # получаем имя файла:
         filename = filedialog.asksaveasfilename(filetypes=(("txt files", "*.txt"), ("all files", "*.*")))
+        self.path_to_image_with_objects = filename
 
-        if len(self.Md.contours_list) != 0:
-            with open(filename, mode = 'w') as file:
+        if len(self.mnemo_obj_list) == 0:
+            if len(self.Md.contours_list) != 0:
+                with open(filename, mode = 'w') as file:
+                    file.write(self.path_to_uploaded_screenshot + '\n')
+                    for index in range (len(self.Md.contours_list)):
+                        str_to_write = self.Md.contours_list[index][0] + '; ' +\
+                                       self.Md.contours_list[index][1] + '; ' +\
+                                       str(self.Md.contours_list[index][2]) + '; ' + \
+                                       str(self.Md.contours_list[index][3]) + '; ' + \
+                                       str(self.Md.contours_list[index][4]) + '; ' + \
+                                       str(self.Md.contours_list[index][5]) + '\n'
+                        file.write(str_to_write)
+                    file.close()
+        else:
+            with open(filename, mode='w') as file:
                 file.write(self.path_to_uploaded_screenshot + '\n')
-                for index in range (len(self.Md.contours_list)):
-                    str_to_write = self.Md.contours_list[index][0] + '; ' +\
-                                   self.Md.contours_list[index][1] + '; ' +\
-                                   str(self.Md.contours_list[index][2]) + '; ' + \
-                                   str(self.Md.contours_list[index][3]) + '; ' + \
-                                   str(self.Md.contours_list[index][4]) + '; ' + \
-                                   str(self.Md.contours_list[index][5]) + '\n'
+                cur_obj_list = self.mnemo_obj_list.head
+                while cur_obj_list is not None:
+                    str_to_write = cur_obj_list.key.obj_name + '; ' + \
+                                   cur_obj_list.key.type + '; ' + \
+                                   str(cur_obj_list.key.x) + '; ' + \
+                                   str(cur_obj_list.key.y) + '; ' + \
+                                   str(cur_obj_list.key.width) + '; ' + \
+                                   str(cur_obj_list.key.height) + '\n'
                     file.write(str_to_write)
+                    cur_obj_list = cur_obj_list.next
                 file.close()
 
     def save_changes_in_object(self, event):
@@ -561,12 +622,12 @@ class GUI(object):
         """
         new_name = self.txtObjName.get() # имя объекта
         new_obj_type = self.cmbxObjType.get() # тип объекта
-        mn_obj = None
 
         # если список объектов не пуст:
         if self.mnemo_obj_list is not None:
             # находим элемент в списке:
             if self.group_selected_flag == 0:
+                # не группу выделяем, а один объект
                 mn_obj_list_el = self.mnemo_obj_list.search_by_object(self.current_mn_obj)
                 if new_name != '':
                     self.clear_tree(self)  # сперва дерево очищаем от объектов
@@ -604,14 +665,23 @@ class GUI(object):
             else:
                 # выделено несколько объектов мнемосхемы.
                 # В таком случае мы можем менять у них только тип
-                cur_obj = self.mnemo_obj_list.head
+                if new_obj_type != "":
+                    cur_obj = self.mnemo_obj_list.head
+                    self.clear_tree(self)
 
-                while cur_obj is not None:
-                    if cur_obj.key.selected_flag == 1:
-                        # объект выделен
-                        if new_obj_type != "":
-                            cur_obj.key.type = new_obj_type
-                    cur_obj = cur_obj.next
+                    while cur_obj is not None:
+                        if cur_obj.key.selected_flag == 1:
+                            # объект выделен
+                            if new_obj_type != "":
+                                cur_obj.key.type = new_obj_type # меняем только тип
+                                self.canvas_with_objects.delete(
+                                    self.canvas_with_objects.find_withtag('selected-' + \
+                                    cur_obj.key.obj_name)
+                                )
+                        self.insert_obj_into_tree(self, cur_obj.key)
+                        cur_obj = cur_obj.next
+
+                    self.repaint_frames_around_objects(self)
 
     def merge_objects(self, event):
         """
@@ -685,11 +755,13 @@ class GUI(object):
         Загрузить картинку с сохранёнными ранее контурами,
         а также перечень контуров
         """
-        filename = filedialog.askopenfilename(filetypes=(("txt files", "*.txt"), ("all files", "*.*")))
+        if self.path_to_image_with_objects == "":
+            filename = filedialog.askopenfilename(filetypes=(("txt files", "*.txt"), ("all files", "*.*")))
+        else:
+            filename = self.path_to_image_with_objects
+            self.path_to_image_with_objects = ""
 
         if filename != '':
-            self.mnemo_obj_list = MnemoObjList()
-
             with open(filename, mode='r') as file:
                 file_rows = file.readlines()
 
@@ -699,16 +771,69 @@ class GUI(object):
 
                 for index in range (1, len(file_rows)):
                     obj_str = file_rows[index].rstrip('\n').split('; ')
-                    mn_obj = MnemoObj(obj_str) # создаём новый объект
                     mn_list_el = MnemoObjList()  # новый элемент списка
-                    mn_list_el.key = mn_obj
+                    mn_list_el.key = MnemoObj(obj_str) # создаём новый объект
                     self.mnemo_obj_list.insert(mn_list_el)  # вставляем объект в список
-                    self.insert_obj_into_tree(self, mn_obj = mn_obj)
                 file.close()
+
+            cur_obj_list = self.mnemo_obj_list.head
+            while cur_obj_list is not None:
+                self.insert_obj_into_tree(self, mn_obj= cur_obj_list.key)  # вставляем объект в дерево объектов
+                cur_obj_list = cur_obj_list.next
 
             self.repaint_frames_around_objects(self)
 
+    def create_new_object(self, event):
+        """
+        создание нового объекта мнемосхемы
+        """
+        if self.create_object == 0:
+            # начинаем создавать новый объект
+            self.create_object = 1 # выставляем
+            self.btnCreateObj['text'] = 'Завершить создание объекта'
+        else:
+            # завершаем создание нового объекта
+            self.create_object = 0
+            self.btnCreateObj['text'] = 'Создать объект'
+            new_obj_name = self.txtNewObjName.get()
+            new_obj_type = self.cmbxNewObjType.get()
+            if new_obj_name == "":
+                messagebox.showinfo("Имя объекта не может быть пустым", "Введите имя нового объекта")
+                return
+            else:
+                if self.mnemo_obj_list.search_by_obj_name(new_obj_name) is not None:
+                    messagebox.showinfo("Имя объекта должно быть уникальным", "Введите уникальное имя объекта")
+                    return
+            if new_obj_type == "":
+                messagebox.showinfo("Не выбран тип объекта", "Выберите тип объекта из списка")
+                return
 
+            new_mn_obj = MnemoObj([
+                new_obj_name,
+                new_obj_type,
+                self.dd_x_coord_begin,
+                self.dd_y_coord_begin,
+                self.dd_x_current - self.dd_x_coord_begin,
+                self.dd_y_current - self.dd_y_coord_begin
+            ])
+
+            new_mn_obj_lst = MnemoObjList()
+            new_mn_obj_lst.key = new_mn_obj
+            self.mnemo_obj_list.insert(new_mn_obj_lst) # вставляем объект
+            self.insert_obj_into_tree(self, mn_obj=new_mn_obj_lst.key) # вставляем объект в дерево
+            self.repaint_frames_around_objects(self)
+
+    def generate_svg_file(self):
+        """
+        сгенерировать файл SVG из обнаруженных объектов мнемосхемы
+        """
+        if self.mnemo_obj_list is not None:
+            svg_builder = SVGBuilder(self.canvas_with_objects['width'],
+                                     self.canvas_with_objects['height'],
+                                     self.mnemo_obj_list)
+            svg_builder.build_svg()
+            svg_builder.write_file()
+            print('SVG exported succesfully')
 
 gui = GUI
 gui.__init__(GUI)

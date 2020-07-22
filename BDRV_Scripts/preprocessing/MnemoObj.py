@@ -15,7 +15,9 @@ class MnemoObj(object):
         3 - координата Y
         4 - ширина объекта
         5 - высота объекта
+        title - строка, краткое наименование объекта. Например, "К-2"
         selected_flag - если 0 - объект не выделен, если 1 - объект выделен
+        tags - это словарь, в котором хранятся теги объекта мнемосхемы
         """
         self.obj_name = lst[0]
         self.type = lst[1]
@@ -23,5 +25,7 @@ class MnemoObj(object):
         self.y = int(lst[3])
         self.width = int(lst[4])
         self.height = int(lst[5])
+        self.title = ""
         self.selected_flag = 0
+        self.tags = {}
 

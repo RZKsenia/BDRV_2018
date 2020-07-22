@@ -15,7 +15,7 @@ class MnemoObjList(object):
         if self.head != None:
             self.head.prev = new_value
         self.head = new_value
-        self.key = new_value.key # ключом служит уникальное имя объекта
+        self.key = new_value.key # ключом служит объект мнемосхемы
         new_value.prev = None
 
     def delete(self, deleted_value):
