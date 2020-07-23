@@ -63,7 +63,7 @@ class SVGBuilder(object):
         self.rectangle(parent=indicator,
                        x=mn_obj.x,
                        y=mn_obj.y,
-                       width=80,
+                       width=50,
                        height=25,
                        fill_color="gray",
                        stroke_width='1',
@@ -73,7 +73,7 @@ class SVGBuilder(object):
         self.rectangle(parent=indicator,
                        x=mn_obj.x+3,
                        y=mn_obj.y+12,
-                       width=73,
+                       width=43,
                        height=10,
                        fill_color="black",
                        stroke_width='1',
@@ -90,8 +90,8 @@ class SVGBuilder(object):
                                           x=str(mn_obj.x + 5),
                                           y=str(mn_obj.y + 20),
                                           style="fill:lime;font-size:xx-small;")
-        indicator_text.text = mn_obj.obj_name
-        indicator_text_tag.text = mn_obj.obj_name
+        indicator_text.text = mn_obj.obj_title
+        indicator_text_tag.text = "0.0"
 
     def add_valve(self, parent, mn_obj):
         """
@@ -181,7 +181,44 @@ class SVGBuilder(object):
                          x=str(mn_obj.x + 3),
                          y=str(mn_obj.y + mn_obj.height/2),
                          style="fill:black;font-size:xx-small;")
-        he_title.text = mn_obj.obj_name
+        he_title.text = mn_obj.obj_title
+
+    def add_pump(self, parent, mn_obj):
+        """
+        добавить насос
+        """
+        group_id = "g" + str(mn_obj.obj_name)
+        pump = self.group(parent, group_id)
+
+        ax = mn_obj.x
+        ay = mn_obj.y + mn_obj.height
+        bx = mn_obj.x + mn_obj.width/2
+        by = mn_obj.y + mn_obj.height/2
+        cx = mn_obj.x + mn_obj.width
+        cy = mn_obj.y + mn_obj.height
+
+        points = str(ax) + ',' + str(ay) + ' '
+        points += str(bx) + ',' + str(by) + ' '
+        points += str(cx) + ',' + str(cy)
+
+        etree.SubElement(pump, "polygon",
+                         x=str(mn_obj.x),
+                         y=str(mn_obj.y),
+                         points=points,
+                         style="fill:chartreuse;stroke:black;stroke-width:1")
+
+        etree.SubElement(pump, "circle",
+                         cx=str(mn_obj.x + mn_obj.width/2),
+                         cy=str(mn_obj.y + mn_obj.height/2-10),
+                         r=str(mn_obj.width/2-2),
+                         style="fill:chartreuse;stroke:black;stoke-width:1")
+
+        pump_title = etree.SubElement(pump,
+                                    "text",
+                                    x=str(mn_obj.x + 10),
+                                    y=str(mn_obj.y + mn_obj.height / 2-5),
+                                    style="fill:black;font-size:xx-small;")
+        pump_title.text = mn_obj.obj_title
 
     def build_svg(self):
         """
@@ -203,6 +240,10 @@ class SVGBuilder(object):
             if type == 'heat-exchanger':
                 self.add_heat_exchanger(self.root,
                                         cur_obj.key)
+
+            if type == 'pump':
+                self.add_pump(self.root,
+                              cur_obj.key)
             cur_obj = cur_obj.next
 
     def write_file(self):

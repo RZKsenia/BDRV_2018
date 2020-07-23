@@ -477,7 +477,8 @@ class Modeller(object):
                 # определяем тип объекта, обведённого текущим контуром:
                 pd = self.GetTypeOfObject(predictions, coloredImageRender, x, y, w, h)
                 obj_title = 'object-'+str(time.clock())
-                self.contours_list.append([obj_title, pd, x, y, w, h])  # записываем тип контура, его коорд. и размеры
+                # записываем тип контура, его коорд. и размеры:
+                self.contours_list.append([obj_title, pd, x, y, w, h, ""])
                 cv2.imwrite(folder_contours + str(pd) + "_" + str(index) + ".png", new_img) # записываем файл
             index += 1
         return

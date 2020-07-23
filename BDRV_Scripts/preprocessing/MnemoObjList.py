@@ -49,38 +49,44 @@ class MnemoObjList(object):
             cur_el = cur_el.next
         return cntr
 
-    def search_by_obj_name(self, obj_name):
+    def search(self, mn_obj=None, obj_name='', obj_title='', x=-1, y=-1):
         """
-        Поиск элемента списка по ключу
+        Поиск элемента списка по одному из параметров:
+        mn_obj - объект мнемосхемы
+        obj_name - имя объекта
+        obj_title - обозначение объекта
+        х, у - координаты объекта
         """
-        mn_obj_lst = self.head
-        while mn_obj_lst != None:
-            if mn_obj_lst.key.obj_name == obj_name:
-                return mn_obj_lst.key
-            else:
+        if mn_obj is not None:
+            list_el = self.head
+            while list_el != None and list_el.key != mn_obj:
+                list_el = list_el.next
+            return list_el
+
+        if obj_name != '':
+            mn_obj_lst = self.head
+            while mn_obj_lst != None:
+                if obj_name != '':
+                    if mn_obj_lst.key.obj_name == obj_name:
+                        return mn_obj_lst.key
                 mn_obj_lst = mn_obj_lst.next
-        return None
 
-    def search_by_object(self, mn_obj):
-        """
-        Поиск по объекту мнемосхемы.
-        mn_obj - объект типа MnemoObject
-        """
-        list_el = self.head
-        while list_el != None and list_el.key != mn_obj:
-            list_el = list_el.next
-        return list_el
+        if obj_title != '':
+            mn_obj_lst = self.head
+            while mn_obj_lst != None:
+                if obj_title != '':
+                    if mn_obj_lst.key.obj_title == obj_title:
+                        return mn_obj_lst.key
+                mn_obj_lst = mn_obj_lst.next
 
-    def search_coord(self, x, y):
-        """
-        поиск объекта мнемосхемы по координатам
-        """
-        el = self.head
-        while el != None:
-            if  el.key.x <= x <= (el.key.x + el.key.width):
-                if el.key.y <= y <= (el.key.y + el.key.height):
-                    return el.key # возвращаем найденный объект
-            el = el.next
+        if (x != -1) and (y != -1):
+            el = self.head
+            while el != None:
+                if el.key.x <= x <= (el.key.x + el.key.width):
+                    if el.key.y <= y <= (el.key.y + el.key.height):
+                        return el.key  # возвращаем найденный объект
+                el = el.next
+
         return None
 
     def count_by_type(self, type):

@@ -56,24 +56,26 @@ class GUI(object):
 
         self.obj_tree.master = self.frame_right_menu
 
-        self.obj_tree["columns"] = ("one", "two", "three")
+        self.obj_tree["columns"] = ("one", "two", "three", "four")
         self.obj_tree.column("#0", width=100, minwidth=20)
         self.obj_tree.column("one", width=70, minwidth=10)
         self.obj_tree.column("two", width=70, minwidth=20)
+        self.obj_tree.column("three", width=70, minwidth=20)
 
         self.obj_tree.heading("#0", text="Имя")
-        self.obj_tree.heading("one", text="Х")
-        self.obj_tree.heading("two", text="Y")
+        self.obj_tree.heading("one", text="Обозначение")
+        self.obj_tree.heading("two", text="X")
+        self.obj_tree.heading("three", text="Y")
 
         # Level 1
-        self.folder1 = self.obj_tree.insert("", 0, "collon", text="Колонны", values=("collon", "", ""))
+        self.folder1 = self.obj_tree.insert("", 0, "collon", text="Колонны", values=("collon", "", "", ""))
         self.folder2 = self.obj_tree.insert("", 1, "heat-exchanger", text="Теплообменники",
-                                            values=("heat-exchanger", "", ""))
-        self.folder3 = self.obj_tree.insert("", 2, "indicator", text="Индикаторы", values=("indicator", "", ""))
-        self.folder4 = self.obj_tree.insert("", 3, "pump", text="Насосы", values=("pump", "", ""))
-        self.folder5 = self.obj_tree.insert("", 4, "tank", text="Резервуары", values=("tank", "", ""))
-        self.folder6 = self.obj_tree.insert("", 5, "valve", text="Арматура", values=("valve", "", ""))
-        self.folder7 = self.obj_tree.insert("", 6, "text", text="Текст", values=("text", "", ""))
+                                            values=("heat-exchanger", "", "", ""))
+        self.folder3 = self.obj_tree.insert("", 2, "indicator", text="Индикаторы", values=("indicator", "", "", ""))
+        self.folder4 = self.obj_tree.insert("", 3, "pump", text="Насосы", values=("pump", "", "", ""))
+        self.folder5 = self.obj_tree.insert("", 4, "tank", text="Резервуары", values=("tank", "", "", ""))
+        self.folder6 = self.obj_tree.insert("", 5, "valve", text="Арматура", values=("valve", "", "", ""))
+        self.folder7 = self.obj_tree.insert("", 6, "text", text="Текст", values=("text", "", "", ""))
         self.obj_tree.pack(side=TOP)
 
         self.frame_right_menu_object_properties.pack(side=TOP)
@@ -82,14 +84,22 @@ class GUI(object):
 
         self.frame_right_menu_object_name_type = ttk.Frame(self.frame_right_menu)
         self.frame_right_menu_object_name_type.pack(side=TOP)
-        self.lbl_objName = ttk.Label(self.frame_right_menu_object_name_type, text='Имя объекта:')
-        self.lbl_objName.pack(side=LEFT)
-        self.txtObjName = ttk.Entry(self.frame_right_menu_object_name_type)
-        self.txtObjName.pack(side=LEFT)
+        self.frame_right_menu_name = ttk.Frame(self.frame_right_menu_object_name_type)
+        self.frame_right_menu_name.pack(side=LEFT)
+        self.lbl_objName = ttk.Label(self.frame_right_menu_name, text='Имя объекта:')
+        self.lbl_objName.pack(side=TOP)
+        self.txtObjName = ttk.Entry(self.frame_right_menu_name)
+        self.txtObjName.pack(side=TOP)
+        self.frame_right_menu_title = ttk.Frame(self.frame_right_menu_object_name_type)
+        self.frame_right_menu_title.pack(side=LEFT)
+        self.lblObjTitle = ttk.Label(self.frame_right_menu_title, text='Обозначение:')
+        self.lblObjTitle.pack(side=TOP)
+        self.txtObjTitle = ttk.Entry(self.frame_right_menu_title)
+        self.txtObjTitle.pack(side=TOP)
         self.frame_right_menu_type = ttk.Frame(self.frame_right_menu_object_name_type)
         self.frame_right_menu_type.pack(side=LEFT)
         self.lblObjType = ttk.Label(self.frame_right_menu_type, text='Тип объекта:')
-        self.lblObjType.pack(side=LEFT)
+        self.lblObjType.pack(side=TOP)
         self.cmbxObjType = ttk.Combobox(self.frame_right_menu_type)
         self.cmbxObjType['values'] = ('collon',
                                       'heat-exchanger',
@@ -98,7 +108,8 @@ class GUI(object):
                                       'tank',
                                       'valve',
                                       'text')
-        self.cmbxObjType.pack(side=LEFT)
+        self.cmbxObjType.pack(side=TOP)
+
 
         self.frame_right_menu_object_coordinates = ttk.Frame(self.frame_right_menu)
         self.frame_right_menu_object_coordinates.pack(side=TOP)
@@ -131,13 +142,19 @@ class GUI(object):
         self.frame_right_menu_create_name = ttk.Frame(self.frame_right_menu_create_name_type)
         self.frame_right_menu_create_name.pack(side=LEFT)
         self.lblCreateName = ttk.Label(self.frame_right_menu_create_name, text='Имя объекта:')
-        self.lblCreateName.pack(side=LEFT)
+        self.lblCreateName.pack(side=TOP)
         self.txtNewObjName = ttk.Entry(self.frame_right_menu_create_name)
-        self.txtNewObjName.pack(side=LEFT)
+        self.txtNewObjName.pack(side=TOP)
+        self.frame_right_menu_create_title = ttk.Frame(self.frame_right_menu_create_name_type)
+        self.frame_right_menu_create_title.pack(side=LEFT)
+        self.lblCreateTitle = ttk.Label(self.frame_right_menu_create_title, text='Обозначение объекта:')
+        self.lblCreateTitle.pack(side=TOP)
+        self.txtNewObjTitle = ttk.Entry(self.frame_right_menu_create_title)
+        self.txtNewObjTitle.pack(side=TOP)
         self.frame_right_menu_create_type = ttk.Frame(self.frame_right_menu_create_name_type)
         self.frame_right_menu_create_type.pack(side=LEFT)
         self.lblCreateType = ttk.Label(self.frame_right_menu_create_type, text='Тип объекта:')
-        self.lblCreateType.pack(side=LEFT)
+        self.lblCreateType.pack(side=TOP)
         self.cmbxNewObjType = ttk.Combobox(self.frame_right_menu_create_type)
         self.cmbxNewObjType['values'] = ('collon',
                                       'heat-exchanger',
@@ -146,7 +163,7 @@ class GUI(object):
                                       'tank',
                                       'valve',
                                       'text')
-        self.cmbxNewObjType.pack(side=LEFT)
+        self.cmbxNewObjType.pack(side=TOP)
         self.btnCreateObj = ttk.Button(self.frame_right_menu_create_object_region, text='Создать объект')
         self.btnCreateObj.pack(side = TOP)
 
@@ -286,48 +303,48 @@ class GUI(object):
                                  "end",
                                  mn_obj.obj_name,
                                  text=mn_obj.obj_name,
-                                 values=(mn_obj.x, mn_obj.y))
+                                 values=(mn_obj.obj_title, mn_obj.x, mn_obj.y))
         else:
             if mn_obj.type == "heat-exchanger":
                 self.obj_tree.insert(self.folder2,
                                      "end",
                                      mn_obj.obj_name,
                                      text=mn_obj.obj_name,
-                                     values=(mn_obj.x, mn_obj.y))
+                                     values=(mn_obj.obj_title, mn_obj.x, mn_obj.y))
             else:
                 if mn_obj.type == "indicator":
                     self.obj_tree.insert(self.folder3,
                                          "end",
                                          mn_obj.obj_name,
                                          text=mn_obj.obj_name,
-                                         values=(mn_obj.x, mn_obj.y))
+                                         values=(mn_obj.obj_title, mn_obj.x, mn_obj.y))
                 else:
                     if mn_obj.type == "pump":
                         self.obj_tree.insert(self.folder4,
                                              "end",
                                              mn_obj.obj_name,
                                              text=mn_obj.obj_name,
-                                             values=(mn_obj.x, mn_obj.y))
+                                             values=(mn_obj.obj_title, mn_obj.x, mn_obj.y))
                     else:
                         if mn_obj.type == "tank":
                             self.obj_tree.insert(self.folder5,
                                                  "end",
                                                  mn_obj.obj_name,
                                                  text=mn_obj.obj_name,
-                                                 values=(mn_obj.x, mn_obj.y))
+                                                 values=(mn_obj.obj_title, mn_obj.x, mn_obj.y))
                         else:
                             if mn_obj.type == "valve":
                                 self.obj_tree.insert(self.folder6,
                                                      "end",
                                                      mn_obj.obj_name,
                                                      text=mn_obj.obj_name,
-                                                     values=(mn_obj.x, mn_obj.y))
+                                                     values=(mn_obj.obj_title, mn_obj.x, mn_obj.y))
                             else:
                                 self.obj_tree.insert(self.folder7,
                                                      "end",
                                                      mn_obj.obj_name,
                                                      text=mn_obj.obj_name,
-                                                     values=(mn_obj.x, mn_obj.y))
+                                                     values=(mn_obj.obj_title, mn_obj.x, mn_obj.y))
 
     def select_objects_in_tree(self, mn_obj):
         """
@@ -343,7 +360,8 @@ class GUI(object):
         """
         selected_obj_name = self.obj_tree.selection()
         mn_onj_name = selected_obj_name[0]
-        searched_obj = self.mnemo_obj_list.search_by_obj_name(mn_onj_name)
+        print(mn_onj_name)
+        searched_obj = self.mnemo_obj_list.search(obj_name=mn_onj_name)
 
         if (self.mnemo_obj_list is not None) & (searched_obj is not None):
             # список объектов мнемосхемы не пуст, и среди объектов найден выделенный
@@ -402,10 +420,10 @@ class GUI(object):
         if self.mnemo_obj_list is not None:
             # находим - есть ли объект мнемосхемы по этим координатам:
             if obj_name == None:
-                mn_obj = self.mnemo_obj_list.search_coord(self.canvas_with_objects.canvasx(event.x),
-                                                          self.canvas_with_objects.canvasy(event.y))
+                mn_obj = self.mnemo_obj_list.search(x=self.canvas_with_objects.canvasx(event.x),
+                                                    y=self.canvas_with_objects.canvasy(event.y))
             else:
-                mn_obj = self.mnemo_obj_list.search_by_obj_name(obj_name)
+                mn_obj = self.mnemo_obj_list.search(obj_name=obj_name)
             # Если объект мнемосхемы найден:
             if mn_obj is not None:
                 self.paint_white_rectangle_around_object(self, event, mn_obj= mn_obj)
@@ -433,6 +451,7 @@ class GUI(object):
         tag_addition - приставка, которая если не пуста, используется для выделенных объектов
         selection_color - цвет выделения объектов
         """
+        self.canvas_with_objects.delete('title')
         # прорисовываем рамки обнаруженных     
         if self.mnemo_obj_list is not None:
             cur_val = self.mnemo_obj_list.head
@@ -453,7 +472,30 @@ class GUI(object):
                                                           outline= color,
                                                           width= 3,
                                                           tag= tag)
+                # выводим описание объекта
+                if cur_val.key.obj_title != '':
+                    self.canvas_with_objects.create_text(cur_val.key.x + cur_val.key.width/2,
+                                                         cur_val.key.y + cur_val.key.height/2,
+                                                         fill = color,
+                                                         text = cur_val.key.obj_title,
+                                                         tags = 'title-'+cur_val.key.obj_title
+                                                         )
                 cur_val = cur_val.next
+
+    def fill_name_and_type_of_object(self, mn_obj):
+        """
+        заполнение элементов управления данными об объекте
+        """
+        # очищаем элементы управления:
+        self.txtObjName.delete(0, END)
+        self.cmbxObjType.delete(0, END)
+        self.txtObjTitle.delete(0, END)
+        # Имя объекта (уникально):
+        self.txtObjName.insert(0, mn_obj.obj_name)
+        # тип объекта:
+        self.cmbxObjType.insert(0, mn_obj.type)
+        # описание объекта (также уникально):
+        self.txtObjTitle.insert(0, mn_obj.obj_title)
 
     def on_click_on_canvas(self, event):
         """
@@ -470,11 +512,12 @@ class GUI(object):
         if self.mnemo_obj_list is not None:
             if self.create_object == 0:
                 # находим - есть ли объект мнемосхемы по этим координатам:
-                mn_obj = self.mnemo_obj_list.search_coord(self.dd_x_coord_begin, self.dd_y_coord_begin)
+                mn_obj = self.mnemo_obj_list.search(x=self.dd_x_coord_begin, y=self.dd_y_coord_begin)
+
                 if mn_obj is not None:
                     # если по координатам найден объект мнемосхемы,
                     # то прописываем значения его свойств в элементы управления.
-                    self.fill_name_and_type_of_object(self, mn_obj= mn_obj)
+                    self.fill_name_and_type_of_object(self, mn_obj)
                     self.select_objects_in_tree(self, mn_obj=mn_obj)
                     self.current_mn_obj = mn_obj
                     self.paint_white_rectangle_around_object(self, event, mn_obj= mn_obj)
@@ -534,6 +577,7 @@ class GUI(object):
             if self.group_selected_flag == 0:
                 # удаляем еденичный выделенный объект:
                 if self.current_mn_obj is not None:
+                    self.canvas_with_objects.delete('title-' + self.current_mn_obj.obj_title)
                     self.delete_object(self,
                                        mn_obj= self.current_mn_obj)
                     self.current_mn_obj = None
@@ -544,6 +588,7 @@ class GUI(object):
                     if list_obj.key.selected_flag == 1:
                         # удаляем нарисованные ранее прямоугольники:
                         self.canvas_with_objects.delete('selected-' + list_obj.key.obj_name)
+                        self.canvas_with_objects.delete('title-'+ list_obj.key.obj_title)
                         self.delete_object(self,
                                            mn_obj= list_obj.key)
                     list_obj = list_obj.next
@@ -556,21 +601,9 @@ class GUI(object):
         # удаляем нарисованные ранее прямоугольники:
         tag = mn_obj.type + '-' + mn_obj.obj_name
         self.canvas_with_objects.delete(tag)
-        self.mnemo_obj_list.delete(self.mnemo_obj_list.search_by_object(mn_obj))  # удаляем объект из списка
+        self.mnemo_obj_list.delete(self.mnemo_obj_list.search(mn_obj=mn_obj))  # удаляем объект из списка
         self.obj_tree.delete(mn_obj.obj_name) # удаляем объект из дерева объектов
         self.repaint_frames_around_objects(self)
-
-    def fill_name_and_type_of_object(self, mn_obj):
-        """
-        Заполнить элементы управления данными из свойств объекта
-        """
-        # очищаем элементы управления:
-        self.txtObjName.delete(0, 'end')
-        self.cmbxObjType.delete(0, 'end')
-        # Имя объекта (уникально):
-        self.txtObjName.insert(index=0, string=mn_obj.obj_name)
-        # тип объекта:
-        self.cmbxObjType.insert(index=0, string=mn_obj.type)
 
     def save_found_contours(self):
         """
@@ -593,7 +626,8 @@ class GUI(object):
                                        str(self.Md.contours_list[index][2]) + '; ' + \
                                        str(self.Md.contours_list[index][3]) + '; ' + \
                                        str(self.Md.contours_list[index][4]) + '; ' + \
-                                       str(self.Md.contours_list[index][5]) + '\n'
+                                       str(self.Md.contours_list[index][5]) + '; ' + \
+                                       str(self.Md.contours_list[index][6]) + '\n'
                         file.write(str_to_write)
                     file.close()
         else:
@@ -606,7 +640,8 @@ class GUI(object):
                                    str(cur_obj_list.key.x) + '; ' + \
                                    str(cur_obj_list.key.y) + '; ' + \
                                    str(cur_obj_list.key.width) + '; ' + \
-                                   str(cur_obj_list.key.height) + '\n'
+                                   str(cur_obj_list.key.height) + '; ' + \
+                                   str(cur_obj_list.key.obj_title) + '\n'
                     file.write(str_to_write)
                     cur_obj_list = cur_obj_list.next
                 file.close()
@@ -622,46 +657,57 @@ class GUI(object):
         """
         new_name = self.txtObjName.get() # имя объекта
         new_obj_type = self.cmbxObjType.get() # тип объекта
+        new_title = self.txtObjTitle.get() # обозначение объекта, например "К-2"
 
         # если список объектов не пуст:
         if self.mnemo_obj_list is not None:
             # находим элемент в списке:
             if self.group_selected_flag == 0:
                 # не группу выделяем, а один объект
-                mn_obj_list_el = self.mnemo_obj_list.search_by_object(self.current_mn_obj)
-                if new_name != '':
-                    self.clear_tree(self)  # сперва дерево очищаем от объектов
+                # Находим объект мнемосхемы в списке:
+                mn_obj_list_el = self.mnemo_obj_list.search(mn_obj=self.current_mn_obj)
 
-                    # объект найден, но имя ему присвоено новое:
-                    if mn_obj_list_el.key.obj_name != new_name:
-                        # сперва проверяем - уникально ли выбранное имя, и нет ли
-                        # в списке уже объекта с таким именем:
-                        searched_obj = self.mnemo_obj_list.search_by_obj_name(new_name)
+                if new_name == '':
+                    messagebox.showinfo('Имя объекта не может быть пустым',
+                                        'Введите имя объекта')
+                    return
+                if new_title == '':
+                    messagebox.showinfo('Описание объекта не может быть пустым',
+                                        'Введите описание объекта')
+                    return
+                if new_obj_type == '':
+                    messagebox.showinfo('Тип объекта не может быть пустым',
+                                        'Выберите тип объекта из списка')
+                    return
 
-                        if searched_obj is not None:
-                            # какой-то объект с таким имеем найден
-                            if mn_obj_list_el.key != searched_obj:
-                                # объекты не совпадают. Значит имя не уникально
-                                messagebox.showinfo("Объект с указанным именем уже есть в списке.",
-                                                    "Укажите уникальное имя объекта")
-                        else:
-                            # никакого объекта с новым именем нет в списке,
-                            # значит имя уникально и можно его обновить для
-                            # текущего выделенного объекта:
-                            # удаляем нарисованные ранее прямоугольники:
-                            self.canvas_with_objects.addtag_withtag(new_name,
-                                                                    self.current_mn_obj.obj_name)
-                            mn_obj_list_el.key.obj_name = new_name # обновлляем имя объекта
+                # имя выбранного объекта отличается от введённого:
+                if mn_obj_list_el.key.obj_name != new_name:
+                    # сперва проверим - нет ли в списке другого объекта с таким же именем:
+                    if self.mnemo_obj_list.search(obj_name=new_name) is not None:
+                        # объект с таким именем уже есть
+                        messagebox.showinfo('Объект с таким именем уже существует',
+                                            'Введите уникальное имя объекта')
+                        return
+                    else:
+                        if self.mnemo_obj_list.search(obj_name=new_name) is None:
+                            # не найден никакой объект с таким именем -
+                            # заменяем имя выбранного объекта на новое
+                            mn_obj_list_el.key.obj_name = new_name
                             self.current_mn_obj.obj_name = new_name
-
-                # если новый тип объекта:
-                if mn_obj_list_el.key.type != new_obj_type:
-                    mn_obj_list_el.key.type = new_obj_type # обновляем тип объекта
-                    self.repaint_frames_around_objects(self) # перерисовываем рамки объектов, т.к. тип изменился
-
-                    self.refresh_tree(self)  # обновляем дерево
                 else:
-                    messagebox.showinfo("Имя объекта не может быть пустым", "Укажите уникальное имя объекта")
+                    # имя соответствует имени выбранного объекта
+                    # найден объект мнемосхемы и это текущий объект
+                    # проверяем - может бы хотим поменять описание или тип?
+                    if new_title != '':
+                        if mn_obj_list_el.key.obj_title != new_title:
+                            # да, меняем описание объекта
+                            mn_obj_list_el.key.obj_title = new_title
+                            self.current_mn_obj.obj_title = new_title
+                    if new_obj_type != '':
+                        if mn_obj_list_el.key.type != new_obj_type:
+                            # да, меняем тип объекта:
+                            mn_obj_list_el.key.type = new_obj_type
+                            self.current_mn_obj.type = new_obj_type
             else:
                 # выделено несколько объектов мнемосхемы.
                 # В таком случае мы можем менять у них только тип
@@ -682,6 +728,10 @@ class GUI(object):
                         cur_obj = cur_obj.next
 
                     self.repaint_frames_around_objects(self)
+                    # очищаем элементы управления:
+        self.txtObjName.delete(0, END)
+        self.cmbxObjType.delete(0, END)
+        self.txtObjTitle.delete(0, END)
 
     def merge_objects(self, event):
         """
@@ -702,7 +752,8 @@ class GUI(object):
                         cur_obj_of_list.key.x,
                         cur_obj_of_list.key.y,
                         cur_obj_of_list.key.width,
-                        cur_obj_of_list.key.height
+                        cur_obj_of_list.key.height,
+                        cur_obj_of_list.key.obj_title
                     ])
                     new_list_el.key = new_el
                     new_work_list.insert(new_list_el) # вставляем объект во временный список
@@ -719,6 +770,7 @@ class GUI(object):
             max_x = cur_obj_of_list.key.x + cur_obj_of_list.key.width
             max_y = cur_obj_of_list.key.y + cur_obj_of_list.key.height
             new_type = cur_obj_of_list.key.type
+            new_title = cur_obj_of_list.key.obj_title
             new_name = 'object-' + str(time.perf_counter()) # задаём уникальное имя объекта
 
             while cur_obj_of_list is not None:
@@ -741,7 +793,8 @@ class GUI(object):
                                 min_x,
                                 min_y,
                                 max_x - min_x,
-                                max_y - min_y])
+                                max_y - min_y,
+                                new_title])
             new_obj_list = MnemoObjList()
             new_obj_list.key = new_obj
             self.mnemo_obj_list.insert(new_obj_list) #вставляем новый объект в список объектов
@@ -790,6 +843,12 @@ class GUI(object):
         if self.create_object == 0:
             # начинаем создавать новый объект
             self.create_object = 1 # выставляем
+            # очищаем элементы управления:
+            self.txtNewObjName.delete(0, END)
+            self.cmbxNewObjType.delete(0, END)
+            self.txtNewObjTitle.delete(0, END)
+            # Имя объекта (уникально):
+            self.txtNewObjName.insert(0, 'object-'+str(time.perf_counter()))
             self.btnCreateObj['text'] = 'Завершить создание объекта'
         else:
             # завершаем создание нового объекта
@@ -797,15 +856,29 @@ class GUI(object):
             self.btnCreateObj['text'] = 'Создать объект'
             new_obj_name = self.txtNewObjName.get()
             new_obj_type = self.cmbxNewObjType.get()
+            new_obj_title = self.txtNewObjTitle.get()
             if new_obj_name == "":
-                messagebox.showinfo("Имя объекта не может быть пустым", "Введите имя нового объекта")
+                messagebox.showinfo("Имя объекта не может быть пустым",
+                                    "Введите имя нового объекта")
                 return
             else:
-                if self.mnemo_obj_list.search_by_obj_name(new_obj_name) is not None:
-                    messagebox.showinfo("Имя объекта должно быть уникальным", "Введите уникальное имя объекта")
+                if self.mnemo_obj_list.search(obj_name=new_obj_name) is not None:
+                    messagebox.showinfo("Имя объекта должно быть уникальным",
+                                        "Введите уникальное имя объекта")
                     return
+            if new_obj_title == "":
+                messagebox.showinfo("Обозначение объекта не может быть пустым",
+                                    "Введите обозначение нового объекта")
+                return
+            else:
+                if self.mnemo_obj_list.search(obj_title=new_obj_title) is not None:
+                    messagebox.showinfo("Обозначение объекта должно быть уникальным",
+                                        "Введите уникальное обозначение объекта")
+                    return
+
             if new_obj_type == "":
-                messagebox.showinfo("Не выбран тип объекта", "Выберите тип объекта из списка")
+                messagebox.showinfo("Не выбран тип объекта",
+                                    "Выберите тип объекта из списка")
                 return
 
             new_mn_obj = MnemoObj([
@@ -814,8 +887,13 @@ class GUI(object):
                 self.dd_x_coord_begin,
                 self.dd_y_coord_begin,
                 self.dd_x_current - self.dd_x_coord_begin,
-                self.dd_y_current - self.dd_y_coord_begin
+                self.dd_y_current - self.dd_y_coord_begin,
+                new_obj_title
             ])
+            # очищаем элементы управления:
+            self.txtNewObjName.delete(0, END)
+            self.cmbxNewObjType.delete(0, END)
+            self.txtNewObjTitle.delete(0, END)
 
             new_mn_obj_lst = MnemoObjList()
             new_mn_obj_lst.key = new_mn_obj
