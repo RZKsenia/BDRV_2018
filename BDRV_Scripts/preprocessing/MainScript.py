@@ -12,16 +12,21 @@ class Modeller(object):
         self.model_dir = r'C:/Python_projects/BDRV2/model'
         self.result_folder = r'C:/Python_projects/BDRV2/test'
 
+        self.baseColor = () # базовый цвет - то есть цвет фона скриншота мнемосхемы
         self.lines_colors = []  # Цвета линий, связыаающих объекты на мнемосхеме
         self.obj_colors = {} # словарь цветов объектов
         self.contours_list = [] # здесь храним типы контуров с их координатами и размерами
         self.found_contours = [] # здесь храним первоначально найденные контуры
 
+        self.horizontal_lines = []
+        self.vertical_lines = []
+        self.lines = []
+
         self.BUFFER_SIZE = 10000
         self.BATCH_SIZE = 64
         self.NUM_EPOCHS = 9
 
-    def uploadDatasets(self):
+    def upload_datasets(self):
         """
         Функция по загрузке наборов данных из папок на диске
         :return:
@@ -41,13 +46,13 @@ class Modeller(object):
 
         return training_datagen, validation_datagen, training_generator, validation_generator
 
-    def RetrainModel(self, model):
+    def retrain_model(self, model):
         """
             Функция повторного обучения модели
             Входным сигналом служит массив размером 250х250, с окном 3х3.
             :return: ничего не возвращает
             """
-        train_dataset, validation_dataset, training_generator, validation_generator = self.uploadDatasets()
+        train_dataset, validation_dataset, training_generator, validation_generator = self.upload_datasets()
         print('Массивы данных загружены')
         print('Приступаю к обучению модели...')
 
@@ -60,7 +65,7 @@ class Modeller(object):
         model.save(self.model_dir + r'/trained_model.h5')
         print('Обучение и сохранение модели завершено')
 
-    def CreateAndTrainModel(self):
+    def create_and_train_model(self):
         """
         Функция создания и обучения модели нейросети. После того, как модель была обучена,
         её можно просто загружать из файла и использовать.
@@ -86,7 +91,7 @@ class Modeller(object):
                       optimizer='rmsprop',
                       metrics=['accuracy'])
 
-        train_dataset, validation_dataset, training_generator, validation_generator = self.uploadDatasets()
+        train_dataset, validation_dataset, training_generator, validation_generator = self.upload_datasets()
         print('Массивы данных загружены')
         print('Приступаю к обучению модели...')
 
@@ -101,7 +106,7 @@ class Modeller(object):
         model.save(self.model_dir + r'/trained_model.h5')
         print ('Обучение и сохранение модели завершено')
 
-    def viewImage(self, image):
+    def view_image(self, image):
         """
         Функция для вывода изображения на экран
         :param image:
@@ -112,17 +117,13 @@ class Modeller(object):
         cv2.waitKey(0)
         cv2.destroyAllWindows()
 
-    def workWithLinesFromColored(self, imageWithLines, type_of_work=None):
+    def delete_lines_from_colored_image(self, imageWithLines):
         """
-        Эталонные цвета находятся в списке Colors
-        Если в функцию передано слово remove, то удаляем линии,
-        в противном же случае (None) наоборот - удаляем всё кроме линий
+        baseColor считываем из файла конфигурации.
+        удаляем линии
         :param image: массив, представляющий собой исходную картинку
-        :typetype_of_work: remove - для того чтобы удалить линии,
         :return: массив, представляющий собой исходную картинку с заменёнными пикселами
         """
-        dt = np.dtype('f8')
-
         for index in range(len(imageWithLines)):
             for jindex in range(len(imageWithLines[index])):
                 cur_clr = imageWithLines[index][jindex]
@@ -132,7 +133,7 @@ class Modeller(object):
 
         return imageWithLines
 
-    def replaceLines(self, imageWithLines, coloredImageSource):
+    def replace_lines(self, imageWithLines, coloredImageSource):
         """
         функция для замены цвета пикселей линий в черно-белом изображении,
         связывающих объекты мнемосхемы
@@ -148,34 +149,177 @@ class Modeller(object):
 
         return coloredImageSource
 
-    def replaceLinesFromImage(self, image, coloredImage):
+    def transform_horizontal_and_vertical_lines(self, filename):
         """
-        функция удаления горизонтальных и вертикальных линий с картинки
-        :param image:
-        :return:
+        Нахождение горизонтальных и вертикальных линий на скриншоте.
+        :param filename: путь к файлу скриншота
+        :return: в результате заполняются 2 списка: horizontal_lines и vertical_lines
         """
-        th2 = cv2.adaptiveThreshold(image, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, 5, -2)
-        kernel = np.ones((1, 1), dtype="uint8")
-        opening = cv2.morphologyEx(th2, cv2.MORPH_OPEN, kernel)
-        horizontal = opening
-        vertical = opening
-        rows, cols = horizontal.shape
+        image = cv2.imread(filename)
+        shape = image.shape  # определяем размер поступившей на вход картинки
+        width = shape[1]  # ширина
+        height = shape[0]  # высота
 
-        horizontalsize = int(cols / 20)
+        # результирующая картинка - шаблон, заполненный базовым цветом
+        result = np.uint8(np.tile(0, (height, width, 3)))
+        # готовим пустую, залитую цветом фона картинку
+        # на неё будем переносить линии
+        for row_index in range(height):
+            for col_index in range(width):
+                cur_clr = image[row_index][col_index]
+                # print('col_index = ', col_index, 'row_index = ', row_index, 'cur_clr = ', cur_clr)
+                result[row_index][col_index][0] = self.baseColor[0]
+                result[row_index][col_index][1] = self.baseColor[1]
+                result[row_index][col_index][2] = self.baseColor[2]
+
+                for clr in self.lines_colors:
+                    if (clr[0] == cur_clr[0]) & (clr[1] == cur_clr[1]) & (clr[2] == cur_clr[2]):
+                        # переносим линии на заготовленную картинку
+                        result[row_index][col_index][0] = image[row_index][col_index][0]
+                        result[row_index][col_index][1] = image[row_index][col_index][1]
+                        result[row_index][col_index][2] = image[row_index][col_index][2]
+
+        cv2.imwrite(r'C:/Python_projects/BDRV2/test/' + "lines.png", result)  # записываем файл
+        image2 = self.read_image_and_convert_it(result) # преобразуем в чёрно-белое изображение
+
+        bw = cv2.adaptiveThreshold(image2, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, 15, -2)
+        horizontal = np.copy(bw)
+        vertical = np.copy(bw)
+        cols  = horizontal.shape[1]
+        rows = horizontal.shape[0]
+
+        horizontalsize = int(cols / 30)
         horizontalStructure = cv2.getStructuringElement(cv2.MORPH_RECT, (horizontalsize, 1))
-        horizontal = cv2.erode(horizontal, horizontalStructure, (-2, -2))
-        horizontal = cv2.dilate(horizontal, horizontalStructure, (-2, -2))
-        newColored2 = self.replaceLines(horizontal, coloredImage)
+        horizontal = cv2.erode(horizontal, horizontalStructure) # , (-2, -2)
+        horizontal = cv2.dilate(horizontal, horizontalStructure) # , (-2, -2)
+        cv2.imwrite(r'C:/Python_projects/BDRV2/test/' + "horizontal_lines.png", horizontal)  # записываем файл
 
-        verticalsize = int(rows / 50)
+        begins_of_lines = []
+        ends_of_lines = []
+        for row_index in range(height-1):
+            for col_index in range(1, width-1):
+                # начало линии - это место, где пиксели сменяют свой цвет с чёрного на белый
+                if (horizontal[row_index][col_index - 1] == 0) and (horizontal[row_index][col_index] == 255):
+                    begins_of_lines.append((col_index, row_index))
+                # конец линии - место, где пиксели сменяют свой цвет с белого на чёрный:
+                if (horizontal[row_index][col_index] == 255) and (horizontal[row_index][col_index + 1] == 0):
+                    ends_of_lines.append((col_index, row_index))
+
+        # соединяем начала и концы линий:
+        for index in range(len(begins_of_lines)):
+            col_index = begins_of_lines[index][0]
+            row_index = begins_of_lines[index][1]
+            color_of_line = (image[row_index][col_index][0],
+                             image[row_index][col_index][1],
+                             image[row_index][col_index][2])
+
+            self.horizontal_lines.append([begins_of_lines[index][0],
+                                        begins_of_lines[index][1],
+                                        ends_of_lines[index][0],
+                                        ends_of_lines[index][1],
+                                        color_of_line])
+
+        index = 0
+        while index < len(self.horizontal_lines):
+            jindex = 0
+            x11 = self.horizontal_lines[index][0]
+            y11 = self.horizontal_lines[index][1]
+            x12 = self.horizontal_lines[index][2]
+            while jindex < len(self.horizontal_lines):
+                if index != jindex:
+                    x21 = self.horizontal_lines[jindex][0]
+                    y21 = self.horizontal_lines[jindex][1]
+                    x22 = self.horizontal_lines[jindex][2]
+
+                    delta_x1 = x11 - x21
+                    delta_x2 = x12 - x22
+                    delta_y = y21 - y11
+
+                    if (-3 <= delta_x1 <= 5) and (1 <= delta_y <= 3) and (-3 <= delta_x2 <= 5):
+                        self.horizontal_lines.remove(self.horizontal_lines[jindex])
+                        jindex -= 1
+                jindex += 1
+            index += 1
+
+        verticalsize = int(rows / 30)
         verticalStructure = cv2.getStructuringElement(cv2.MORPH_RECT, (1, verticalsize))
-        vertical = cv2.erode(vertical, verticalStructure, (-2, -2))
-        vertical = cv2.dilate(vertical, verticalStructure, (-2, -2))
-        newColored2 = self.replaceLines(vertical, coloredImage)
+        vertical = cv2.erode(vertical, verticalStructure) # , (-2, -2)
+        vertical = cv2.dilate(vertical, verticalStructure) # , (-2, -2)
 
-        return newColored2
+        cv2.imwrite(r'C:/Python_projects/BDRV2/test/' + "vertical_lines.png", vertical)  # записываем файл
 
-    def readImageAndConvertIt(self, image2):
+        begins_of_lines = []
+        ends_of_lines = []
+        for col_index in range(width-1):
+            for row_index in range(1, height - 1):
+                # начало линии - это место, где пиксели сменяют свой цвет с чёрного на белый
+                if (vertical[row_index - 1][col_index] == 0) and (vertical[row_index][col_index] == 255):
+                    begins_of_lines.append((col_index, row_index))
+                # конец линии - место, где пиксели сменяют свой цвет с белого на чёрный:
+                if (vertical[row_index][col_index] == 255) and (vertical[row_index + 1][col_index] == 0):
+                    ends_of_lines.append((col_index, row_index))
+
+        # соединяем начала и концы линий:
+        for index in range(len(begins_of_lines)):
+            col_index = begins_of_lines[index][0]
+            row_index = begins_of_lines[index][1]
+            color_of_line = (image[row_index][col_index][0],
+                             image[row_index][col_index][1],
+                             image[row_index][col_index][2])
+
+            self.vertical_lines.append([begins_of_lines[index][0],
+                                        begins_of_lines[index][1],
+                                        ends_of_lines[index][0],
+                                        ends_of_lines[index][1],
+                                        color_of_line])
+
+        index = 0
+        while index < len(self.vertical_lines):
+            jindex = 0
+            x11 = self.vertical_lines[index][0]
+            y11 = self.vertical_lines[index][1]
+            y12 = self.vertical_lines[index][3]
+            while jindex < len(self.vertical_lines):
+                if index != jindex:
+                    x21 = self.vertical_lines[jindex][0]
+                    y21 = self.vertical_lines[jindex][1]
+                    y22 = self.vertical_lines[jindex][3]
+
+                    delta_x = x21 - x11
+                    delta_y1 = y11 - y21
+                    delta_y2 = y12 - y22
+
+                    if (-5 <= delta_y1 <= 5) and (1 <= delta_x <= 5) and (-5 <= delta_y2 <= 5):
+                        self.vertical_lines.remove(self.vertical_lines[jindex])
+                        jindex -= 1
+                jindex += 1
+            index += 1
+
+        image = None
+        horizontal = None
+        vertical = None
+
+        # Соединение краёв линий для образования прямых углов:
+        for index in range(len(self.horizontal_lines)):
+            x11 = self.horizontal_lines[index][0]
+            y11 = self.horizontal_lines[index][1]
+            x12 = self.horizontal_lines[index][2]
+            y12 = self.horizontal_lines[index][3]
+            for jindex in range(len(self.vertical_lines)):
+                x21 = self.vertical_lines[jindex][0]
+                y21 = self.vertical_lines[jindex][1]
+                x22 = self.vertical_lines[jindex][2]
+                y22 = self.vertical_lines[jindex][3]
+
+                if(-10 <= x21 - x11 <= 10) and (1 <= y21 - y11 <= 10):
+                    self.horizontal_lines[index][0] = self.vertical_lines[jindex][0]
+                    self.vertical_lines[jindex][1] = self.horizontal_lines[index][1]
+
+                if(-10 <= x12 - x22 <= 10) and (-10 <= y22 - y12 <= 10):
+                    self.horizontal_lines[index][2] = self.vertical_lines[jindex][2]
+                    self.vertical_lines[jindex][3] = self.horizontal_lines[index][3]
+
+    def read_image_and_convert_it(self, image2):
         """
         Преобразование изображения к оттенкам серого для дальнейшего оконтуривания
         :param image2:
@@ -197,7 +341,7 @@ class Modeller(object):
         :return:
         """
         ret, treshold = cv2.threshold(gray, 50, 255, 0)
-        # viewImage(treshold)
+        # view_image(treshold)
 
         # создайте и примените закрытие
         kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (7, 7))
@@ -208,7 +352,7 @@ class Modeller(object):
         cv2.drawContours(gray, countours, -1, (0, 150, 0), 3)
         return gray, countours
 
-    def mergeContours(self, contours_type=None):
+    def merge_contours(self, contours_type=None):
         """
         Функция объединяет близлежащие или вложенные контуры
         :param contours: это массив списков, каждый из которых представляет собой набор из 4х параметров:
@@ -298,7 +442,7 @@ class Modeller(object):
             return a
         return self.gcd(b, a % b)
 
-    def resizeImage(self, image):
+    def resize_image(self, image):
         """
         Функция для изменения размера массива image в размер 250х250x3,
         так как именно такой размер воспринимает нейросеть и на нём
@@ -348,7 +492,7 @@ class Modeller(object):
 
         return result
 
-    def GetTypeOfObject(self, predictions, coloredImageRender, x, y, w, h):
+    def get_type_of_object(self, predictions, coloredImageRender, x, y, w, h):
         """
         Функция определения типа объекта
         :param prediction: предсказание в виде кортежа
@@ -408,7 +552,7 @@ class Modeller(object):
             return "valve"
         return "unknown"
 
-    def analizeScreenshot(self, filename2):
+    def analize_screenshot(self, filename2):
         """
         Функция анализа скриншота. Результатом будет картинка, на которой будут
         выделены контуры найденных объектов.
@@ -417,12 +561,12 @@ class Modeller(object):
 
         coloredImage = cv2.imread(filename2)
         coloredImageRender = cv2.imread(filename2)
-        image3 = self.workWithLinesFromColored(coloredImage, 'remove') # удаляем линии
-        cv2.imwrite(self.result_folder + r'/without_lines.png', image3)  # записываем файл для контроля
-        #img_lines = self.workWithLinesFromColored(coloredImage) # вычленяем линии
+        image3 = self.delete_lines_from_colored_image(coloredImage) # удаляем линии
+        # cv2.imwrite(self.result_folder + r'/without_lines.png', image3)  # записываем файл для контроля
+        self.transform_horizontal_and_vertical_lines(filename2) # обнаружение горизонт. и верт. линий на скриншоте
 
         # Размываем изображение, конвертируем его в чёрно-белое и находим контуры объектов:
-        image5, contours = self.FindContoursInGray(self.readImageAndConvertIt(cv2.blur(image3, (5, 5))))
+        image5, contours = self.FindContoursInGray(self.read_image_and_convert_it(cv2.blur(image3, (5, 5))))
 
         index = 0
         while (index < len(contours)):
@@ -439,7 +583,7 @@ class Modeller(object):
             index += 1
 
         # Объединяем контуры, которые находятся близко друг к другу:
-        contours_to_draw = self.mergeContours()
+        contours_to_draw = self.merge_contours()
 
         # Восстановим в точности ту же модель, включая веса и оптимизатор
         new_model = tf.keras.models.load_model(self.model_dir + r'/trained_model.h5')
@@ -469,16 +613,17 @@ class Modeller(object):
                         dindex += 1
                     cindex += 1
 
-                new_img = np.uint8(Modeller.resizeImage(self, dArr))
+                new_img = np.uint8(Modeller.resize_image(self, dArr))
 
                 # Добавим изображение в пакет, где он является единственным членом
                 img2 = (np.expand_dims(new_img, 0))
                 predictions = new_model.predict(img2, batch_size=6)
                 # определяем тип объекта, обведённого текущим контуром:
-                pd = self.GetTypeOfObject(predictions, coloredImageRender, x, y, w, h)
+                pd = self.get_type_of_object(predictions, coloredImageRender, x, y, w, h)
                 obj_title = 'object-'+str(time.clock())
                 # записываем тип контура, его коорд. и размеры:
                 self.contours_list.append([obj_title, pd, x, y, w, h, ""])
                 cv2.imwrite(folder_contours + str(pd) + "_" + str(index) + ".png", new_img) # записываем файл
             index += 1
         return
+

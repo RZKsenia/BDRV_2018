@@ -9,6 +9,7 @@ from PIL import Image, ImageTk
 
 from BDRV_Scripts.preprocessing.MainScript import Modeller # класс для работы с нейросетью
 from BDRV_Scripts.preprocessing.MnemoObj import MnemoObj # класс объекта мнемосхемы
+from BDRV_Scripts.preprocessing.MnemoLineObj import MnemoLineObj # класс линии в мнемосхеме
 from BDRV_Scripts.preprocessing.MnemoObjList import MnemoObjList # класс списка объектов мнемосхемы
 from BDRV_Scripts.preprocessing.SVGBuilder import SVGBuilder # класс генерации и экспорта мнемосхемы в SVG
 
@@ -28,6 +29,7 @@ class GUI(object):
         self.create_object = 0 # 1 - начинаем создавать объект
 
         self.mnemo_obj_list = MnemoObjList() # объекты мнемосхемы
+        self.mnemo_lines_list = MnemoObjList() # линии мнемосхемы
         self.current_mn_obj = None # текущий выделенный мышью объект мнемосхемы
         self.group_selected_flag = 0 # флаг, указывающий на групповое выделение объектов
         self.key_pressed_code = None # код нажатой клавиши
@@ -185,7 +187,7 @@ class GUI(object):
             # цыета линий:
             while row != '===objects-colors:===\n':
                 row = row.split(' ')
-                self.Md.lines_colors.append((int(row[0]), int(row[1]), int(row[2].rstrip('\n'))))
+                self.Md.lines_colors.append((int(row[0]), int(row[1]), int(row[2]), row[3].rstrip('\n')))
                 row = config.readline()
             # цвета объектов:
             row = config.readline()
@@ -219,6 +221,7 @@ class GUI(object):
 
         self.window.mainloop()
 
+
     def upload_screenshot(self, file=None):
         """
         Функция команды меню - Загрузить файл мнемосхемы.
@@ -247,7 +250,7 @@ class GUI(object):
         else:
             messagebox.showinfo('Обнаружение объектов', 'Поиск объектов может занять некоторое время. Подождите.')
             # проводим анализ загруженного скриншота:
-            self.Md.analizeScreenshot(self.path_to_uploaded_screenshot)
+            self.Md.analize_screenshot(self.path_to_uploaded_screenshot)
             self.save_found_contours(self) #сохраняем найденные контуры
             self.open_found_contours(self) # загружаем только что сохранённый файл и отображаем контуры
             self.tab2.focus()
@@ -453,7 +456,7 @@ class GUI(object):
         """
         self.canvas_with_objects.delete('title')
         # прорисовываем рамки обнаруженных     
-        if self.mnemo_obj_list is not None:
+        if len(self.mnemo_obj_list) != 0:
             cur_val = self.mnemo_obj_list.head
 
             while cur_val is not None:
@@ -481,6 +484,23 @@ class GUI(object):
                                                          tags = 'title-'+cur_val.key.obj_title
                                                          )
                 cur_val = cur_val.next
+
+        if len(self.mnemo_lines_list) != 0:
+            # прорисовываем линии
+            cur_line = self.mnemo_lines_list.head
+
+            while cur_line is not None:
+                color = cur_line.key.line_color
+                self.canvas_with_objects.create_line(
+                                cur_line.key.x1,
+                                cur_line.key.y1,
+                                cur_line.key.x2,
+                                cur_line.key.y2,
+                                fill = color,
+                                width = 2,
+                                tags = 'line'
+                )
+                cur_line = cur_line.next
 
     def fill_name_and_type_of_object(self, mn_obj):
         """
@@ -629,6 +649,7 @@ class GUI(object):
                                        str(self.Md.contours_list[index][5]) + '; ' + \
                                        str(self.Md.contours_list[index][6]) + '\n'
                         file.write(str_to_write)
+                    self.write_lines_into_file(self, file= file)
                     file.close()
         else:
             with open(filename, mode='w') as file:
@@ -644,7 +665,38 @@ class GUI(object):
                                    str(cur_obj_list.key.obj_title) + '\n'
                     file.write(str_to_write)
                     cur_obj_list = cur_obj_list.next
+                self.write_lines_into_file(self, file= file)
                 file.close()
+
+    def write_lines_into_file(self, file):
+        """
+        записываем в файл горизонтальные и вертикальные линии
+        """
+        file.write('Lines\n')
+        if self.Md.horizontal_lines != []:
+            str_to_write = ''
+            # записываем линии
+            for index in range(len(self.Md.horizontal_lines)):
+                str_to_write = str(self.Md.horizontal_lines[index][0]) + ', ' + \
+                                str(self.Md.horizontal_lines[index][1]) + ', ' + \
+                                str(self.Md.horizontal_lines[index][2]) + ', ' + \
+                                str(self.Md.horizontal_lines[index][3]) + ', ' + \
+                                str(self.Md.horizontal_lines[index][4][0]) + ', ' + \
+                                str(self.Md.horizontal_lines[index][4][1]) + ', ' + \
+                                str(self.Md.horizontal_lines[index][4][2]) + '\n'
+                file.write(str_to_write)
+
+            str_to_write = ''
+            # записываем линии
+            for index in range(len(self.Md.vertical_lines)):
+                str_to_write = str(self.Md.vertical_lines[index][0]) + ', ' + \
+                                str(self.Md.vertical_lines[index][1]) + ', ' + \
+                                str(self.Md.vertical_lines[index][2]) + ', ' + \
+                                str(self.Md.vertical_lines[index][3]) + ', ' + \
+                                str(self.Md.vertical_lines[index][4][0]) + ', ' + \
+                                str(self.Md.vertical_lines[index][4][1]) + ', ' + \
+                                str(self.Md.vertical_lines[index][4][2]) + '\n'
+                file.write(str_to_write)
 
     def save_changes_in_object(self, event):
         """
@@ -822,11 +874,36 @@ class GUI(object):
                 self.upload_screenshot(self, file = self.path_to_uploaded_screenshot) # выводим на экран картинку с найденными контурами
                 self.window.title('Автомнемо - ' + self.path_to_uploaded_screenshot)
 
-                for index in range (1, len(file_rows)):
-                    obj_str = file_rows[index].rstrip('\n').split('; ')
-                    mn_list_el = MnemoObjList()  # новый элемент списка
-                    mn_list_el.key = MnemoObj(obj_str) # создаём новый объект
-                    self.mnemo_obj_list.insert(mn_list_el)  # вставляем объект в список
+                index = 1
+                while index < len(file_rows):
+                    if file_rows[index] != 'Lines\n':
+                        obj_str = file_rows[index].rstrip('\n').split('; ')
+                        mn_list_el = MnemoObjList()  # новый элемент списка
+                        mn_list_el.key = MnemoObj(obj_str) # создаём новый объект
+                        self.mnemo_obj_list.insert(mn_list_el)  # вставляем объект в список
+                    else:
+                        jindex = index+1
+                        while jindex < len(file_rows):
+                            line_info = file_rows[jindex].rstrip('\n').split(', ')
+                            mn_line_el = MnemoObjList()
+
+                            color_title = 'black'
+                            color = [int(line_info[4]), int(line_info[5]), int(line_info[6])]
+
+                            for index in range(len(self.Md.lines_colors)):
+                                if (self.Md.lines_colors[index][0] == color[0]) and \
+                                    (self.Md.lines_colors[index][1] == color[1]) and \
+                                    (self.Md.lines_colors[index][2] == color[2]):
+                                    # цвет найден - получаем название цвета
+                                    color_title = self.Md.lines_colors[index][3]
+
+                            # создаём линию:
+                            mn_line_el.key = MnemoLineObj(line_info=line_info, color_title= color_title)
+                            self.mnemo_lines_list.insert(mn_line_el)
+                            jindex += 1
+                        break
+                    index += 1
+
                 file.close()
 
             cur_obj_list = self.mnemo_obj_list.head
@@ -908,7 +985,8 @@ class GUI(object):
         if self.mnemo_obj_list is not None:
             svg_builder = SVGBuilder(self.canvas_with_objects['width'],
                                      self.canvas_with_objects['height'],
-                                     self.mnemo_obj_list)
+                                     self.mnemo_obj_list,
+                                     self.mnemo_lines_list)
             svg_builder.build_svg()
             svg_builder.write_file()
             print('SVG exported succesfully')

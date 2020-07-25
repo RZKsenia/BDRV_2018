@@ -8,10 +8,11 @@ class SVGBuilder(object):
     Класс для построения файла в формате SVG на основе
     обработанного скришота мнемосхемы
     """
-    def __init__(self, width, height, mnemo_obj_list):
+    def __init__(self, width, height, mnemo_obj_list, mnlines_obj_list):
         self.width = width
         self.height = height
         self.mnobj_list = mnemo_obj_list # список объектов мнемосхемы
+        self.mnlines_list = mnlines_obj_list # список линий мнемосхемы
 
         self.root = etree.Element("svg",
                                   version = "1.1",
@@ -31,7 +32,6 @@ class SVGBuilder(object):
 
         # Эта часть содержит описания (например, градиенты и прочее):
         self.defs = etree.SubElement(self.root, "desc")
-
 
     def group(self, root, id):
         """
@@ -220,12 +220,33 @@ class SVGBuilder(object):
                                     style="fill:black;font-size:xx-small;")
         pump_title.text = mn_obj.obj_title
 
+    def add_line(self, parent, mn_line_obj):
+        """
+        добавить линию
+        """
+        etree.SubElement(parent, "line",
+                         x1 = str(mn_line_obj.x1),
+                         y1 = str(mn_line_obj.y1),
+                         x2 = str(mn_line_obj.x2),
+                         y2 = str(mn_line_obj.y2),
+                         style="stroke:" + mn_line_obj.line_color + ";stroke-width:2")
+
     def build_svg(self):
         """
         создание файла SVG на базе обнаруженных объектов мнемосхемы
         """
-        cur_obj = self.mnobj_list.head
+        # группируем все линии вместе:
+        group_id = "g" + str('mnemoscheme-lines')
+        lines_group = self.group(self.root, group_id)
+        cur_line_obj = self.mnlines_list.head
+        # Рисуем соединительные линии мнемосхемы:
+        while cur_line_obj is not None:
+            self.add_line(lines_group, cur_line_obj.key)
+            cur_line_obj = cur_line_obj.next
 
+
+        cur_obj = self.mnobj_list.head
+        # Рисуем объекты мнемосхемы
         while cur_obj is not None:
             type = cur_obj.key.type # получаем тип объекта
 
