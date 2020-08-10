@@ -27,6 +27,8 @@ class GUI(object):
         self.dd_y_coord_begin = 0 # y координата начала Drag&Drop
         self.btn_pushed = 0 # 1 если левая кнопка мыши нажата, 0 если отжата
         self.create_object = 0 # 1 - начинаем создавать объект
+        self.zoomer_x = 0 # координата х окна увеличения
+        self.zoomer_y = 0 # координата у окна увеличения
 
         self.mnemo_obj_list = MnemoObjList() # объекты мнемосхемы
         self.mnemo_lines_list = MnemoObjList() # линии мнемосхемы
@@ -49,6 +51,9 @@ class GUI(object):
 
         self.obj_tree.configure(yscrollcommand=vbar.set)
         self.frame_right_menu.pack(side=RIGHT, fill=Y)
+
+        self.canvas_zoomer = Canvas(self.frame_right_menu)
+
 
         self.tab1 = ttk.Frame(self.tab_control)
         self.tab2 = ttk.Frame(self.tab_control)
@@ -221,7 +226,6 @@ class GUI(object):
 
         self.window.mainloop()
 
-
     def upload_screenshot(self, file=None):
         """
         Функция команды меню - Загрузить файл мнемосхемы.
@@ -274,11 +278,19 @@ class GUI(object):
         # Сохраняем картинку в переменную класса, чтобы сборщик мусора её не уничтожил раньше времени:
         self.display_image = ImageTk.PhotoImage(screenshot)
 
+        width = screenshot.width
+        height = screenshot.height
+        self.resized_image = ImageTk.PhotoImage(screenshot.resize((width*2, height*2), Image.ANTIALIAS))
+
         self.canvas_with_objects.config(width=screenshot.width, height=screenshot.height)
         self.canvas_with_objects.config(scrollregion=(0, 0, screenshot.width, screenshot.height))
         self.canvas_with_objects.create_image(screenshot.width / 2,
                                               screenshot.height / 2,
                                               image=self.display_image)
+        self.canvas_zoomer.pack(side=TOP)
+        self.canvas_zoomer.create_image(width * 5,
+                                        height * 5,
+                                        image= self.resized_image)
 
         # отслеживаем координаты курсора, нажатые клавиши:
         self.canvas_with_objects.bind("<Motion>", lambda event: self.on_over_the_object_move(self, event))
@@ -434,12 +446,25 @@ class GUI(object):
                 # удаляем нарисованный ранее белый прямоугольник:
                 self.canvas_with_objects.delete(self.canvas_with_objects.find_withtag('white_rectangle'))
 
+    def paint_zoomer(self, event):
+        """
+        прорисовка прямоугольника "увеличительного стекла"
+        """
+        self.canvas_with_objects.delete('zoomer')
+        self.rect = self.canvas_with_objects.create_rectangle(self.zoomer_x,
+                                                              self.zoomer_y,
+                                                              100,
+                                                              100,
+                                                              outline='red',
+                                                              width=7,
+                                                              tag='zoomer')
+
     def paint_white_rectangle_around_object(self, event, mn_obj):
         """
         нарисовать белый прямоугольник вокруг объекта
         """
         # удаляем нарисованные ранее прямоугольники:
-        self.canvas_with_objects.delete(self.canvas_with_objects.find_withtag('white_rectangle'))
+        self.canvas_with_objects.delete('white_rectangle')
         # курсор попал на объект - обводим его прямоугольником
         self.rect = self.canvas_with_objects.create_rectangle(mn_obj.x, mn_obj.y,
                                                               mn_obj.x + mn_obj.width,
@@ -455,6 +480,7 @@ class GUI(object):
         selection_color - цвет выделения объектов
         """
         self.canvas_with_objects.delete('title')
+
         # прорисовываем рамки обнаруженных     
         if len(self.mnemo_obj_list) != 0:
             cur_val = self.mnemo_obj_list.head
@@ -502,6 +528,8 @@ class GUI(object):
                 )
                 cur_line = cur_line.next
 
+        self.paint_zoomer(self, event= None)
+
     def fill_name_and_type_of_object(self, mn_obj):
         """
         заполнение элементов управления данными об объекте
@@ -528,6 +556,7 @@ class GUI(object):
         self.dd_x_coord_begin = self.canvas_with_objects.canvasx(event.x)
         self.dd_y_coord_begin = self.canvas_with_objects.canvasy(event.y)
         self.btn_pushed = 1
+
 
         if self.mnemo_obj_list is not None:
             if self.create_object == 0:

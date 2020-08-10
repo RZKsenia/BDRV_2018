@@ -61,16 +61,6 @@ class SVGBuilder(object):
         indicator = self.group(parent, group_id)
 
         self.rectangle(parent=indicator,
-                       x=mn_obj.x,
-                       y=mn_obj.y,
-                       width=50,
-                       height=25,
-                       fill_color="gray",
-                       stroke_width='1',
-                       stroke_color="gray"
-                       )
-
-        self.rectangle(parent=indicator,
                        x=mn_obj.x+3,
                        y=mn_obj.y+12,
                        width=43,

@@ -161,16 +161,12 @@ class Modeller(object):
         height = shape[0]  # высота
 
         # результирующая картинка - шаблон, заполненный базовым цветом
-        result = np.uint8(np.tile(0, (height, width, 3)))
+        result = np.uint8(np.full(shape=(height, width, 3), fill_value= self.baseColor))
         # готовим пустую, залитую цветом фона картинку
         # на неё будем переносить линии
         for row_index in range(height):
             for col_index in range(width):
                 cur_clr = image[row_index][col_index]
-                # print('col_index = ', col_index, 'row_index = ', row_index, 'cur_clr = ', cur_clr)
-                result[row_index][col_index][0] = self.baseColor[0]
-                result[row_index][col_index][1] = self.baseColor[1]
-                result[row_index][col_index][2] = self.baseColor[2]
 
                 for clr in self.lines_colors:
                     if (clr[0] == cur_clr[0]) & (clr[1] == cur_clr[1]) & (clr[2] == cur_clr[2]):
