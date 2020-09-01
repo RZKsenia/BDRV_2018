@@ -4,7 +4,12 @@ import cv2
 import time
 
 class Modeller(object):
-
+    """
+    Класс для работы с моделью нейросети.
+    Методы его включают в себя загрузку данных, обучение и переобучение нейросети.
+    Также класс включает методы для распознования объектов, поиска и удаления линий
+    на изображении.
+    """
     def __init__(self):
         self.directory = r'C:/Python_projects/BDRV2/images'
         self.training_directory = r'C:/Python_projects/BDRV2/images/training'

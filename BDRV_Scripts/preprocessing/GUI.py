@@ -14,6 +14,10 @@ from BDRV_Scripts.preprocessing.MnemoObjList import MnemoObjList # класс с
 from BDRV_Scripts.preprocessing.SVGBuilder import SVGBuilder # класс генерации и экспорта мнемосхемы в SVG
 
 class GUI(object):
+    """
+    Класс для построения графического интерфейса программного обеспечения.
+    Включает в себя также методы обработки событий.
+    """
     def __init__(self):
         self.path_to_config_file = r'C:/Python_projects/BDRV2/config/bdrv_config.txt'
         self.path_to_uploaded_screenshot = '' # здесь будем хранить путь к скриншоту мнемосхемы
